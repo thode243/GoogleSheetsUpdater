@@ -3,9 +3,12 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
+from datetime import datetime, time
 import os
 import json
+import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # URL of the NIFTY option chain
 URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-14"
@@ -13,13 +16,24 @@ URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-
 # Google Sheets setup
 SHEET_ID = os.getenv("SHEET_ID")  # Store your sheet ID as env variable in GitHub Actions
 SHEET_NAME = "Sheet1"  # Name of the worksheet
+POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))  # Default to 30 seconds
+
+def is_market_open():
+    """Check if current time is within NSE market hours (9:10 AM to 3:35 PM IST)."""
+    now = datetime.now().time()
+    market_open = time(9, 10)
+    market_close = time(15, 35)
+    return market_open <= now <= market_close
 
 def fetch_option_chain():
+    session = requests.Session()
+    retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retries))
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
-    response = requests.get(URL, headers=headers)
+    response = session.get(URL, headers=headers)
     
     if response.status_code != 200:
         raise Exception(f"Failed to fetch data: Status code {response.status_code}")
@@ -36,7 +50,6 @@ def fetch_option_chain():
     return df
 
 def update_google_sheet(df):
-    # Load credentials from environment variable
     credentials_json = os.getenv("GOOGLE_CREDENTIALS")
     if not credentials_json:
         raise Exception("Google credentials not found in environment variables")
@@ -55,12 +68,19 @@ def update_google_sheet(df):
     print(f"Updated Google Sheet at {datetime.now()}")
 
 def main():
-    try:
-        df = fetch_option_chain()
-        update_google_sheet(df)
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    while True:
+        try:
+            if is_market_open():
+                df = fetch_option_chain()
+                update_google_sheet(df)
+            else:
+                print("Market closed, skipping update...")
+            print(f"Sleeping for {POLLING_INTERVAL_SECONDS} seconds...")
+            time.sleep(POLLING_INTERVAL_SECONDS)
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            print(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
+            time.sleep(POLLING_INTERVAL_SECONDS)
 
 if __name__ == "__main__":
     main()
-
