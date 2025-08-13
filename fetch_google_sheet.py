@@ -10,7 +10,7 @@ import os
 URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-14"
 
 # Google Sheets setup
-SHEET_ID = os.getenv("SHEET_ID")  # Use environment variable for Google Sheet ID
+SHEET_ID = os.getenv("1vCvyVA_eOFT8nAyLjywo0EgyGtHqynUWCY4_O2VHc_w")  # Use environment variable for Google Sheet ID
 SHEET_NAME = "Sheet1"  # Name of the worksheet (adjust if needed)
 
 def fetch_option_chain():
