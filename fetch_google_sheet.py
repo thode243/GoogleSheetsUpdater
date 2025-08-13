@@ -11,7 +11,7 @@ import json
 URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-14"
 
 # Google Sheets setup
-SHEET_ID = os.getenv("1vCvyVA_eOFT8nAyLjywo0EgyGtHqynUWCY4_O2VHc_w")  # Store your sheet ID as env variable in GitHub Actions
+SHEET_ID = os.getenv("SHEET_ID")  # Store your sheet ID as env variable in GitHub Actions
 SHEET_NAME = "Sheet1"  # Name of the worksheet
 
 def fetch_option_chain():
