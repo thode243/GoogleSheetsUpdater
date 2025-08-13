@@ -29,8 +29,9 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: echo "$GOOGLE_CREDENTIALS" > service_account.json
 
+   
       - name: Run update script
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
-          POLLING_INTERVAL: 30  # Run every 30 seconds during workflow execution
-        run: python GoogleSheetsUpdater/fetch_option_chain.py
+          POLLING_INTERVAL: 30
+        run: python GoogleSheetsUpdater/fetch_option_chain.py  # Corrected path
