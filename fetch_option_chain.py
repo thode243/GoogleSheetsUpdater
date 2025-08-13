@@ -3,7 +3,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime, time
+from datetime import datetime, time as dt_time  # renamed to avoid conflict
 import os
 import json
 import time
@@ -21,8 +21,8 @@ POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))  # Default to 
 def is_market_open():
     """Check if current time is within NSE market hours (9:10 AM to 3:35 PM IST)."""
     now = datetime.now().time()
-    market_open = time(9, 10)
-    market_close = time(15, 35)
+    market_open = dt_time(9, 10)
+    market_close = dt_time(15, 35)
     return market_open <= now <= market_close
 
 def fetch_option_chain():
