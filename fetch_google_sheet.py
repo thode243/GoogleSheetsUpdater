@@ -154,21 +154,6 @@ def is_market_open():
     logger.debug(f"Market open check: {is_open} (Current time: {now})")
     return is_open
 
-# ================== MAIN LOOP ==================
-# Replace the import line at the top of the script
-import requests
-import pandas as pd
-import gspread
-import os
-from datetime import datetime
-from time import sleep  # Import sleep directly to avoid conflicts
-from oauth2client.service_account import ServiceAccountCredentials
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-import logging
-from datetime import time as dtime  # Rename datetime.time to dtime to avoid conflict
-
-# ... (rest of the imports and config remain unchanged)
 
 # Update the is_market_open function to use dtime
 def is_market_open():
