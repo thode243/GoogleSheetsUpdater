@@ -41,22 +41,32 @@ def is_market_open():
     return market_open <= now <= market_close
 
 
+INDEX_PAGE = "https://www.moneycontrol.com/indices/nifty"
+
 def get_latest_expiry_url():
     session = requests.Session()
-    retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-    session.mount("https://", HTTPAdapter(max_retries=retries))
+    session.mount("https://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1)))
+    resp = session.get(INDEX_PAGE, headers=headers)
+    if resp.status_code != 200:
+        raise Exception(f"Failed to load index page: {resp}")
 
-    resp = session.get(BASE_URL, headers=headers)
+    soup = BeautifulSoup(resp.text, "html.parser")
+    oc_link = soup.find("a", string="Option Chain")
+    if not oc_link:
+        raise Exception("Option chain link not found")
+
+    base_url = "https://www.moneycontrol.com" + oc_link["href"]
+    resp = session.get(base_url, headers=headers)
     if resp.status_code != 200:
         raise Exception(f"Failed to load base page: {resp}")
 
     soup = BeautifulSoup(resp.text, "html.parser")
     options = soup.select("select#fno_expiry option")
     if not options:
-        raise Exception("No expiry dates found on Moneycontrol")
+        raise Exception("No expiry dates found")
 
     nearest_expiry = options[0]["value"].strip()
-    expiry_url = f"{BASE_URL}/{nearest_expiry}"
+    expiry_url = f"{base_url}/{nearest_expiry}"
     return expiry_url
 
 
