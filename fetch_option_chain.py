@@ -1,3 +1,4 @@
+
 import requests
 import pandas as pd
 import gspread
@@ -81,7 +82,7 @@ def fetch_option_chain():
     return pd.DataFrame(rows)
 
 def update_google_sheet(df):
-    credentials_path = r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-f1d3b81e2d0e.json"
+    credentials_path = r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-02079de166c4.json"
 
     if not os.path.exists(credentials_path):
         raise FileNotFoundError(f"Google credentials file not found at {credentials_path}")
@@ -125,5 +126,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
