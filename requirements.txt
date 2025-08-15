@@ -1,5 +1,6 @@
-requests
 pandas
 beautifulsoup4
 gspread
 oauth2client
+requests
+lxml
