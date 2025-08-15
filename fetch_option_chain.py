@@ -14,6 +14,13 @@ SHEET_ID = os.getenv("SHEET_ID")  # Google Sheet ID from environment variable
 SHEET_NAME = "Sheet1"  # Tab name in your sheet
 POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))  # Update interval
 
+# ================== CONFIG ==================
+NSE_API_URL = "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry=21-Aug-2025"
+SHEET_ID = os.getenv("SHEET_ID")  # Google Sheet ID from environment variable
+SHEET_NAME = "Sheet1"  # Tab name in your sheet
+POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))  # Update interval
+
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
@@ -23,28 +30,7 @@ HEADERS = {
 }
 
 # ================== FUNCTIONS ==================
-def get_latest_expiry(session):
-    """Fetch the nearest expiry date for NIFTY from NSE with cookies setup."""
-    # Warm up session with cookies
-    session.get("https://www.nseindia.com", headers=HEADERS, timeout=10)
-    session.get("https://www.nseindia.com/option-chain", headers=HEADERS, timeout=10)
-
-    # Now call the API
-    r = session.get(
-        "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY",
-        headers=HEADERS,
-        timeout=10
-    )
-    r.raise_for_status()
-    data = r.json()
-    expiry_dates = data.get("records", {}).get("expiryDates", [])
-    if not expiry_dates:
-        raise Exception(f"No expiry dates found in NSE response: {data}")
-    return expiry_dates[0]
-
-
 def fetch_option_chain():
-    """Fetch option chain data for the latest expiry."""
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
@@ -53,13 +39,8 @@ def fetch_option_chain():
     session.get("https://www.nseindia.com/", headers=HEADERS, timeout=10)
     session.get("https://www.nseindia.com/option-chain", headers=HEADERS, timeout=10)
 
-    # Step 2: Get latest expiry dynamically
-    latest_expiry = get_latest_expiry(session)
-    print(f"📅 Using expiry: {latest_expiry}")
-
-    # Step 3: Fetch option chain for that expiry
-    url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry={latest_expiry}"
-    resp = session.get(url, headers=HEADERS, timeout=10)
+    # Step 2: API call
+    resp = session.get(NSE_API_URL, headers=HEADERS, timeout=10)
     resp.raise_for_status()
     data = resp.json()
 
@@ -100,29 +81,24 @@ def fetch_option_chain():
     return pd.DataFrame(rows)
 
 def update_google_sheet(df):
-    """Push DataFrame to Google Sheet."""
     credentials_json = os.getenv("GOOGLE_CREDENTIALS")
     if not credentials_json:
         raise Exception("Google credentials not found in environment variables")
-
-    if not SHEET_ID:
-        raise Exception("Google Sheet ID not found in environment variables")
-
+    
     creds_dict = json.loads(credentials_json)
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
-
+    
     sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
     sheet.clear()
-
+    
     data = [df.columns.values.tolist()] + df.values.tolist()
     sheet.update("A1", data)
-
+    
     print(f"✅ Updated Google Sheet at {datetime.now()} - Rows: {len(df)}")
 
 def is_market_open():
-    """Check if within market hours."""
     now = datetime.now().time()
     market_start = datetime.strptime("09:15", "%H:%M").time()
     market_end = datetime.strptime("18:30", "%H:%M").time()
@@ -146,3 +122,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
