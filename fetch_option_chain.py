@@ -3,7 +3,7 @@ import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# Specific expiry endpoint
+# Target expiry-specific API
 NSE_API_URL = "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry=21-Aug-2025"
 
 HEADERS = {
@@ -19,16 +19,16 @@ def fetch_option_chain():
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
-    # Step 1 — Load NSE homepage to get cookies
-    session.get("https://www.nseindia.com/", headers=HEADERS, timeout=10)
+    # Step 1: Visit NSE homepage to get cookies
+    home_resp = session.get("https://www.nseindia.com/", headers=HEADERS, timeout=10)
+    home_resp.raise_for_status()
 
-    # Step 2 — Call expiry-specific API
+    # Step 2: Use same session with cookies to request option chain
     resp = session.get(NSE_API_URL, headers=HEADERS, timeout=10)
     resp.raise_for_status()
     data = resp.json()
 
-    # Extract records
-    option_data = data.get("records", [])
+    option_data = data.get("records", {}).get("data", [])
     if not option_data:
         raise Exception("No option chain data found for this expiry")
 
