@@ -57,11 +57,11 @@ def fetch_option_chain():
     return df
 
 def update_google_sheet(df):
-    credentials_json = os.getenv("GOOGLE_CREDENTIALS")
-    if not credentials_json:
-        raise Exception("Google credentials not found in environment variables")
-    
-    creds_dict = json.loads(credentials_json)
+    if os.getenv("GOOGLE_CREDENTIALS"):
+    creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+else:
+    with open("service_account.json") as f:
+        creds_dict = json.load(f)
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
