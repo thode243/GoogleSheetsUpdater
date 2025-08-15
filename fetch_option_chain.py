@@ -12,7 +12,7 @@ from urllib3.util.retry import Retry
 from io import StringIO
 
 # Base URL for NIFTY option chain
-BASE_URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY"
+URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-21"
 
 # Google Sheets setup
 SHEET_ID = os.getenv("SHEET_ID")  # Env variable in GitHub Actions
@@ -33,9 +33,19 @@ def get_latest_expiry_url():
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
+    
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.moneycontrol.com/",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+}
+
 
     resp = session.get(BASE_URL, headers=headers)
     if resp.status_code != 200:
@@ -51,18 +61,14 @@ def get_latest_expiry_url():
     return expiry_url
 
 
-def fetch_option_chain():
-    """Fetch the option chain table for the latest expiry."""
-    url = get_latest_expiry_url()
 
+
+def fetch_option_chain():
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
-    response = session.get(url, headers=headers)
-
+    
+    response = session.get(URL, headers=headers)
     if response.status_code != 200:
         raise Exception(f"Failed to fetch data: {response}")
 
@@ -72,12 +78,8 @@ def fetch_option_chain():
     if len(tables) < 2:
         raise Exception("Option chain table not found")
 
-    table = tables[1]
-
-    # ✅ Fix FutureWarning + force lxml parser
-    html_str = StringIO(str(table))
+    html_str = StringIO(str(tables[1]))
     df = pd.read_html(html_str, flavor="lxml")[0]
-
     return df
 
 
