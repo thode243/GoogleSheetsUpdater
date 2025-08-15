@@ -1,15 +1,13 @@
-# Replace the import line at the top of the script
 import requests
 import pandas as pd
 import gspread
 import os
-from datetime import datetime
-from time import sleep  # Import sleep directly to avoid conflicts
+import logging
+from datetime import datetime, time as dtime
+from time import sleep
 from oauth2client.service_account import ServiceAccountCredentials
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import logging
-from datetime import time as dtime  # Rename datetime.time to dtime to avoid conflict
 
 # ================== CONFIG ==================
 SHEET_ID = os.getenv("SHEET_ID")
@@ -20,13 +18,14 @@ CREDENTIALS_PATH = os.getenv(
     r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-02079de166c4.json"
 )
 
-# NSE API configuration
 BASE_URL = "https://www.nseindia.com"
 OPTION_CHAIN_URL = f"{BASE_URL}/api/option-chain-indices?symbol=NIFTY"
+
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/115.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*",
     "Referer": f"{BASE_URL}/option-chain",
@@ -34,7 +33,7 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-# Logging setup
+# ================== LOGGING ==================
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -47,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 # ================== FUNCTIONS ==================
 def create_session():
-    """Create a requests session with retry logic."""
+    """Create a requests session, load NSE cookies from homepage and option chain page."""
     session = requests.Session()
     retries = Retry(
         total=3,
@@ -55,9 +54,13 @@ def create_session():
         status_forcelist=[429, 500, 502, 503, 504],
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    # Fetch cookies
+
+    # Step 1: Visit homepage to get initial cookies
     session.get(BASE_URL, headers=HEADERS, timeout=10)
-    return主的
+    # Step 2: Visit option chain HTML page to get authenticated cookies
+    session.get(f"{BASE_URL}/option-chain", headers=HEADERS, timeout=10)
+
+    return session
 
 def fetch_option_chain():
     """Fetch and process NIFTY option chain data."""
@@ -143,8 +146,6 @@ def update_google_sheet(df):
         logger.error(f"Error updating Google Sheet: {e}")
         raise
 
-from datetime import datetime, time  # Ensure 'time' is imported from datetime
-
 def is_market_open():
     """Check if the market is open based on IST time."""
     now = datetime.now().time()
@@ -154,18 +155,6 @@ def is_market_open():
     logger.debug(f"Market open check: {is_open} (Current time: {now})")
     return is_open
 
-
-# Update the is_market_open function to use dtime
-def is_market_open():
-    """Check if the market is open based on IST time."""
-    now = datetime.now().time()
-    market_start = dtime(9, 15)  # 9:15 AM IST
-    market_end = dtime(15, 30)  # 3:30 PM IST
-    is_open = market_start <= now <= market_end
-    logger.debug(f"Market open check: {is_open} (Current time: {now})")
-    return is_open
-
-# Update the main function to use sleep
 def main():
     """Main loop to periodically fetch and update option chain data."""
     logger.info("Starting NIFTY option chain updater...")
@@ -178,11 +167,11 @@ def main():
             else:
                 logger.info("Market is closed, skipping update...")
             logger.info(f"Sleeping for {POLLING_INTERVAL_SECONDS} seconds...")
-            sleep(POLLING_INTERVAL_SECONDS)  # Use sleep instead of time.sleep
+            sleep(POLLING_INTERVAL_SECONDS)
         except Exception as e:
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
-            sleep(POLLING_INTERVAL_SECONDS)  # Use sleep instead of time.sleep
+            sleep(POLLING_INTERVAL_SECONDS)
 
 if __name__ == "__main__":
     try:
