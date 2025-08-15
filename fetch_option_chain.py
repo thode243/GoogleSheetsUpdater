@@ -32,11 +32,16 @@ def is_market_open():
 
 
 def fetch_option_chain():
-    """Fetch NIFTY option chain from NSE JSON API."""
+    """Fetch NIFTY option chain from NSE JSON API with proper session cookies."""
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
+    # Step 1: Get cookies from homepage
+    homepage_url = "https://www.nseindia.com/"
+    session.get(homepage_url, headers=headers, timeout=10)
+
+    # Step 2: Call the API with same session
     resp = session.get(NSE_API_URL, headers=headers, timeout=10)
     resp.raise_for_status()
     data = resp.json()
@@ -63,6 +68,7 @@ def fetch_option_chain():
 
     df = pd.DataFrame(rows)
     return df
+
 
 
 def update_google_sheet(df):
