@@ -2,12 +2,15 @@ import requests
 import pandas as pd
 import gspread
 import os
-import logging
-from datetime import datetime, time as dtime
+from datetime import datetime
+from datetime import time as dtime
 from time import sleep
 from oauth2client.service_account import ServiceAccountCredentials
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import logging
+import sys
+import pytz
 
 # ================== CONFIG ==================
 SHEET_ID = os.getenv("SHEET_ID")
@@ -18,14 +21,13 @@ CREDENTIALS_PATH = os.getenv(
     r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-02079de166c4.json"
 )
 
+# NSE API configuration
 BASE_URL = "https://www.nseindia.com"
 OPTION_CHAIN_URL = f"{BASE_URL}/api/option-chain-indices?symbol=NIFTY"
-
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/115.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*",
     "Referer": f"{BASE_URL}/option-chain",
@@ -33,20 +35,34 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-# ================== LOGGING ==================
+# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("option_chain_updater.log"),
+        logging.StreamHandler(stream=sys.stdout),
+        logging.FileHandler("option_chain_updater.log", encoding="utf-8"),
     ],
 )
+class UnicodeSafeStreamHandler(logging.StreamHandler):
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            msg = msg.encode("ascii", errors="replace").decode("ascii")
+            self.stream.write(msg + self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
 logger = logging.getLogger(__name__)
+for handler in logger.handlers:
+    if isinstance(handler, logging.StreamHandler):
+        logger.removeHandler(handler)
+logger.addHandler(UnicodeSafeStreamHandler(stream=sys.stdout))
 
 # ================== FUNCTIONS ==================
 def create_session():
-    """Create a requests session, load NSE cookies from homepage and option chain page."""
+    """Create a requests session with retry logic."""
     session = requests.Session()
     retries = Retry(
         total=3,
@@ -54,12 +70,7 @@ def create_session():
         status_forcelist=[429, 500, 502, 503, 504],
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
-
-    # Step 1: Visit homepage to get initial cookies
     session.get(BASE_URL, headers=HEADERS, timeout=10)
-    # Step 2: Visit option chain HTML page to get authenticated cookies
-    session.get(f"{BASE_URL}/option-chain", headers=HEADERS, timeout=10)
-
     return session
 
 def fetch_option_chain():
@@ -132,12 +143,11 @@ def update_google_sheet(df):
         client = gspread.authorize(creds)
         sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-        # Clear and update sheet
         sheet.clear()
         data = [df.columns.values.tolist()] + df.values.tolist()
         sheet.update("A1", data)
 
-        logger.info(f"Updated Google Sheet with {len(df)} rows at {datetime.now()}")
+        logger.info(f"Updated Google Sheet with {len(df)} rows at {datetime.now(pytz.timezone('Asia/Kolkata'))}")
 
     except gspread.exceptions.APIError as e:
         logger.error(f"Google Sheets API error: {e}")
@@ -148,13 +158,15 @@ def update_google_sheet(df):
 
 def is_market_open():
     """Check if the market is open based on IST time."""
-    now = datetime.now().time()
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist).time()
     market_start = dtime(9, 15)  # 9:15 AM IST
-    market_end = dtime(18, 30)  # 3:30 PM IST
+    market_end = dtime(15, 30)  # 3:30 PM IST
     is_open = market_start <= now <= market_end
-    logger.debug(f"Market open check: {is_open} (Current time: {now})")
+    logger.debug(f"Market open check: {is_open} (Current time: {now}, IST)")
     return is_open
 
+# ================== MAIN LOOP ==================
 def main():
     """Main loop to periodically fetch and update option chain data."""
     logger.info("Starting NIFTY option chain updater...")
