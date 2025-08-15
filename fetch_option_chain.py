@@ -81,13 +81,16 @@ def fetch_option_chain():
     return pd.DataFrame(rows)
 
 def update_google_sheet(df):
-    credentials_json = os.getenv("GOOGLE_CREDENTIALS")
-    if not credentials_json:
-        raise Exception("Google credentials not found in environment variables")
+    credentials_path = r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-f1d3b81e2d0e.json"
+
+    if not os.path.exists(credentials_path):
+        raise FileNotFoundError(f"Google credentials file not found at {credentials_path}")
     
-    creds_dict = json.loads(credentials_json)
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
     client = gspread.authorize(creds)
     
     sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
