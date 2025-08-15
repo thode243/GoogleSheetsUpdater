@@ -14,7 +14,7 @@ import sys
 
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "1vCvyVA_eOFT8nAyLjywo0EgyGtHqynUWCY4_O2VHc_w")
-SHEET_NAME = os.getenv("SHEET_NAME", "Sheet1")
+SHEET_NAME = os.getenv("SHEET_NAME", "Sheet2")
 POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))
 CREDENTIALS_PATH = os.getenv(
     "GOOGLE_CREDENTIALS_PATH",
