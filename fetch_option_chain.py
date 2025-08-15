@@ -75,22 +75,21 @@ def fetch_option_chain():
     return pd.DataFrame(rows)
 
 def update_google_sheet(df):
-    credentials_json = os.getenv("GOOGLE_CREDENTIALS")
-    if not credentials_json:
-        raise Exception("Google credentials not found in environment variables")
-    
-    creds_dict = json.loads(credentials_json)
+    # Path to your service account file
+    SERVICE_ACCOUNT_FILE = "service_account.json"  # rename your file to have .json extension
+
+    # Load credentials
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
     client = gspread.authorize(creds)
-    
+
+    # Open and update sheet
     sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
     sheet.clear()
-    
     data = [df.columns.values.tolist()] + df.values.tolist()
     sheet.update("A1", data)
-    
-    print(f"✅ Updated Google Sheet at {datetime.now()} - Rows: {len(df)}")
+
+    print(f"Updated Google Sheet at {datetime.now()}")
 
 def is_market_open():
     now = datetime.now().time()
