@@ -1,13 +1,15 @@
+# Replace the import line at the top of the script
 import requests
 import pandas as pd
 import gspread
 import os
-from datetime import datetime, time
+from datetime import datetime
+from time import sleep  # Import sleep directly to avoid conflicts
 from oauth2client.service_account import ServiceAccountCredentials
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import logging
-import time
+from datetime import time as dtime  # Rename datetime.time to dtime to avoid conflict
 
 # ================== CONFIG ==================
 SHEET_ID = os.getenv("SHEET_ID")
@@ -146,13 +148,39 @@ from datetime import datetime, time  # Ensure 'time' is imported from datetime
 def is_market_open():
     """Check if the market is open based on IST time."""
     now = datetime.now().time()
-    market_start = time(9, 15)  # 9:15 AM IST
-    market_end = time(15, 30)  # 3:30 PM IST
+    market_start = dtime(9, 15)  # 9:15 AM IST
+    market_end = dtime(18, 30)  # 3:30 PM IST
     is_open = market_start <= now <= market_end
     logger.debug(f"Market open check: {is_open} (Current time: {now})")
     return is_open
 
 # ================== MAIN LOOP ==================
+# Replace the import line at the top of the script
+import requests
+import pandas as pd
+import gspread
+import os
+from datetime import datetime
+from time import sleep  # Import sleep directly to avoid conflicts
+from oauth2client.service_account import ServiceAccountCredentials
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import logging
+from datetime import time as dtime  # Rename datetime.time to dtime to avoid conflict
+
+# ... (rest of the imports and config remain unchanged)
+
+# Update the is_market_open function to use dtime
+def is_market_open():
+    """Check if the market is open based on IST time."""
+    now = datetime.now().time()
+    market_start = dtime(9, 15)  # 9:15 AM IST
+    market_end = dtime(15, 30)  # 3:30 PM IST
+    is_open = market_start <= now <= market_end
+    logger.debug(f"Market open check: {is_open} (Current time: {now})")
+    return is_open
+
+# Update the main function to use sleep
 def main():
     """Main loop to periodically fetch and update option chain data."""
     logger.info("Starting NIFTY option chain updater...")
@@ -165,11 +193,11 @@ def main():
             else:
                 logger.info("Market is closed, skipping update...")
             logger.info(f"Sleeping for {POLLING_INTERVAL_SECONDS} seconds...")
-            time.sleep(POLLING_INTERVAL_SECONDS)
+            sleep(POLLING_INTERVAL_SECONDS)  # Use sleep instead of time.sleep
         except Exception as e:
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
-            time.sleep(POLLING_INTERVAL_SECONDS)
+            sleep(POLLING_INTERVAL_SECONDS)  # Use sleep instead of time.sleep
 
 if __name__ == "__main__":
     try:
