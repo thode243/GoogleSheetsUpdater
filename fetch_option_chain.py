@@ -57,11 +57,14 @@ def fetch_option_chain():
     return df
 
 def update_google_sheet(df):
+    # ✅ Try environment variable first (GitHub Actions)
     if os.getenv("GOOGLE_CREDENTIALS"):
-    creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
-else:
-    with open("service_account.json") as f:
-        creds_dict = json.load(f)
+        creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+    else:
+        # ✅ Fallback to local file (for running on your PC)
+        with open("service_account.json") as f:
+            creds_dict = json.load(f)
+
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
@@ -73,6 +76,7 @@ else:
     sheet.update("A1", data)
     
     print(f"Updated Google Sheet at {datetime.now()}")
+
 
 def main():
     while True:
