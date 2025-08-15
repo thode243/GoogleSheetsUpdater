@@ -47,7 +47,7 @@ headers = {
 }
 
 
-    resp = session.get(BASE_URL, headers=headers)
+    resp = session.get(URL, headers=headers)
     if resp.status_code != 200:
         raise Exception(f"Failed to load base page: {resp}")
 
@@ -57,7 +57,7 @@ headers = {
         raise Exception("No expiry dates found on Moneycontrol")
 
     nearest_expiry = options[0]["value"].strip()
-    expiry_url = f"{BASE_URL}/{nearest_expiry}"
+    expiry_url = f"{URL}/{nearest_expiry}"
     return expiry_url
 
 
