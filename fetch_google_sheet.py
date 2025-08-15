@@ -141,11 +141,13 @@ def update_google_sheet(df):
         logger.error(f"Error updating Google Sheet: {e}")
         raise
 
+from datetime import datetime, time  # Ensure 'time' is imported from datetime
+
 def is_market_open():
     """Check if the market is open based on IST time."""
     now = datetime.now().time()
     market_start = time(9, 15)  # 9:15 AM IST
-    market_end = time(18, 30)   # 3:30 PM IST
+    market_end = time(15, 30)  # 3:30 PM IST
     is_open = market_start <= now <= market_end
     logger.debug(f"Market open check: {is_open} (Current time: {now})")
     return is_open
