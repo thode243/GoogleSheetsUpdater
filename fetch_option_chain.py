@@ -12,7 +12,7 @@ from urllib3.util.retry import Retry
 from io import StringIO
 
 # Base URL for NIFTY option chain
-URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-21"
+BASE_URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY"
 
 headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
@@ -42,13 +42,11 @@ def is_market_open():
 
 
 def get_latest_expiry_url():
-    """Fetch the nearest expiry date URL from Moneycontrol."""
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    
-    
-    resp = session.get(URL, headers=headers)  # using URL instead of undefined BASE_URL
+
+    resp = session.get(BASE_URL, headers=headers)
     if resp.status_code != 200:
         raise Exception(f"Failed to load base page: {resp}")
 
@@ -58,24 +56,24 @@ def get_latest_expiry_url():
         raise Exception("No expiry dates found on Moneycontrol")
 
     nearest_expiry = options[0]["value"].strip()
-    expiry_url = f"{URL}/{nearest_expiry}"
+    expiry_url = f"{BASE_URL}/{nearest_expiry}"
     return expiry_url
 
 
 
 
 def fetch_option_chain():
+    expiry_url = get_latest_expiry_url()
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
     
-    response = session.get(URL, headers=headers)
+    response = session.get(expiry_url, headers=headers)
     if response.status_code != 200:
         raise Exception(f"Failed to fetch data: {response}")
 
     soup = BeautifulSoup(response.text, "html.parser")
     tables = soup.find_all("table")
-
     if len(tables) < 2:
         raise Exception("Option chain table not found")
 
