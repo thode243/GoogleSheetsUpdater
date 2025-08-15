@@ -1,127 +1,179 @@
 import requests
 import pandas as pd
 import gspread
-import json
-import time
 import os
-from datetime import datetime
+from datetime import datetime, time
 from oauth2client.service_account import ServiceAccountCredentials
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import logging
+import time
 
 # ================== CONFIG ==================
-SHEET_ID = os.getenv("SHEET_ID")  # Google Sheet ID from environment variable
-SHEET_NAME = "Sheet1"
+SHEET_ID = os.getenv("SHEET_ID")
+SHEET_NAME = os.getenv("SHEET_NAME", "Sheet1")
 POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))
+CREDENTIALS_PATH = os.getenv(
+    "GOOGLE_CREDENTIALS_PATH",
+    r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-02079de166c4.json"
+)
 
+# NSE API configuration
+BASE_URL = "https://www.nseindia.com"
+OPTION_CHAIN_URL = f"{BASE_URL}/api/option-chain-indices?symbol=NIFTY"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    ),
     "Accept": "application/json, text/plain, */*",
-    "Referer": "https://www.nseindia.com/option-chain",
+    "Referer": f"{BASE_URL}/option-chain",
     "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive"
+    "Connection": "keep-alive",
 }
 
-CREDENTIALS_PATH = r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-02079de166c4.json"
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("option_chain_updater.log"),
+    ],
+)
+logger = logging.getLogger(__name__)
 
 # ================== FUNCTIONS ==================
-def get_latest_expiry(session):
-    url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
-    resp = session.get(url, headers=HEADERS, timeout=10)
-    resp.raise_for_status()
-    data = resp.json()
-    expiries = data.get("records", {}).get("expiryDates", [])
-    if not expiries:
-        raise Exception("No expiry dates found from NSE.")
-    return expiries[0]  # earliest expiry
+def create_session():
+    """Create a requests session with retry logic."""
+    session = requests.Session()
+    retries = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    # Fetch cookies
+    session.get(BASE_URL, headers=HEADERS, timeout=10)
+    return主的
 
 def fetch_option_chain():
-    session = requests.Session()
-    retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-    session.mount("https://", HTTPAdapter(max_retries=retries))
+    """Fetch and process NIFTY option chain data."""
+    try:
+        session = create_session()
+        response = session.get(OPTION_CHAIN_URL, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        data = response.json()
 
-    # Step 1: Get cookies
-    session.get("https://www.nseindia.com/", headers=HEADERS, timeout=10)
+        option_data = data.get("records", {}).get("data", [])
+        if not option_data:
+            raise ValueError("No option chain data found.")
 
-    # Step 2: Get data (this returns expiry dates + option chain in one call)
-    resp = session.get("https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY",
-                       headers=HEADERS, timeout=10)
-    resp.raise_for_status()
-    data = resp.json()
+        rows = []
+        for entry in option_data:
+            strike = entry.get("strikePrice")
+            expiry = entry.get("expiryDate")
+            ce = entry.get("CE", {})
+            pe = entry.get("PE", {})
 
-    option_data = data.get("records", {}).get("data", [])
-    rows = []
+            rows.append({
+                "CE OI": ce.get("openInterest", 0),
+                "CE Chng OI": ce.get("changeinOpenInterest", 0),
+                "CE Volume": ce.get("totalTradedVolume", 0),
+                "CE IV": ce.get("impliedVolatility", 0),
+                "CE LTP": ce.get("lastPrice", 0),
+                "CE Chng LTP": ce.get("change", 0),
+                "CE Bid Qty": ce.get("bidQty", 0),
+                "CE Bid Price": ce.get("bidprice", 0),
+                "CE Ask Price": ce.get("askPrice", 0),
+                "CE Ask Qty": ce.get("askQty", 0),
+                "Strike Price": strike,
+                "Expiry Date": expiry,
+                "PE Bid Qty": pe.get("bidQty", 0),
+                "PE Bid Price": pe.get("bidprice", 0),
+                "PE Ask Price": pe.get("askPrice", 0),
+                "PE Ask Qty": pe.get("askQty", 0),
+                "PE Chng LTP": pe.get("change", 0),
+                "PE LTP": pe.get("lastPrice", 0),
+                "PE IV": pe.get("impliedVolatility", 0),
+                "PE Volume": pe.get("totalTradedVolume", 0),
+                "PE Chng OI": pe.get("changeinOpenInterest", 0),
+                "PE OI": pe.get("openInterest", 0),
+            })
 
-    for entry in option_data:
-        strike = entry.get("strikePrice")
-        expiry = entry.get("expiryDate")
-        ce = entry.get("CE", {})
-        pe = entry.get("PE", {})
+        df = pd.DataFrame(rows)
+        if df.empty:
+            raise ValueError("Empty DataFrame created from option chain data.")
+        return df
 
-        rows.append({
-            "CE OI": ce.get("openInterest"),
-            "CE Chng OI": ce.get("changeinOpenInterest"),
-            "CE Volume": ce.get("totalTradedVolume"),
-            "CE IV": ce.get("impliedVolatility"),
-            "CE LTP": ce.get("lastPrice"),
-            "CE Chng LTP": ce.get("change"),
-            "CE Bid Qty": ce.get("bidQty"),
-            "CE Bid Price": ce.get("bidprice"),
-            "CE Ask Price": ce.get("askPrice"),
-            "CE Ask Qty": ce.get("askQty"),
-            "Strike Price": strike,
-            "Expiry Date": expiry,
-            "PE Bid Qty": pe.get("bidQty"),
-            "PE Bid Price": pe.get("bidprice"),
-            "PE Ask Price": pe.get("askPrice"),
-            "PE Ask Qty": pe.get("askQty"),
-            "PE Chng LTP": pe.get("change"),
-            "PE LTP": pe.get("lastPrice"),
-            "PE IV": pe.get("impliedVolatility"),
-            "PE Volume": pe.get("totalTradedVolume"),
-            "PE Chng OI": pe.get("changeinOpenInterest"),
-            "PE OI": pe.get("openInterest")
-        })
-
-    return pd.DataFrame(rows)
-
+    except requests.RequestException as e:
+        logger.error(f"HTTP error while fetching option chain: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching option chain: {e}")
+        raise
 
 def update_google_sheet(df):
-    if not os.path.exists(CREDENTIALS_PATH):
-        raise FileNotFoundError(f"Google credentials file not found at {CREDENTIALS_PATH}")
-    
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
-    client = gspread.authorize(creds)
+    """Update Google Sheet with the provided DataFrame."""
+    try:
+        if not os.path.exists(CREDENTIALS_PATH):
+            raise FileNotFoundError(f"Google credentials file not found at {CREDENTIALS_PATH}")
 
-    sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
-    sheet.clear()
-    data = [df.columns.values.tolist()] + df.values.tolist()
-    sheet.update("A1", data)
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-    print(f"✅ Updated Google Sheet at {datetime.now()} - Rows: {len(df)}")
+        # Clear and update sheet
+        sheet.clear()
+        data = [df.columns.values.tolist()] + df.values.tolist()
+        sheet.update("A1", data)
+
+        logger.info(f"Updated Google Sheet with {len(df)} rows at {datetime.now()}")
+
+    except gspread.exceptions.APIError as e:
+        logger.error(f"Google Sheets API error: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error updating Google Sheet: {e}")
+        raise
 
 def is_market_open():
+    """Check if the market is open based on IST time."""
     now = datetime.now().time()
-    market_start = datetime.strptime("09:15", "%H:%M").time()
-    market_end = datetime.strptime("18:30", "%H:%M").time()
-    return market_start <= now <= market_end
+    market_start = time(9, 15)  # 9:15 AM IST
+    market_end = time(18, 30)   # 3:30 PM IST
+    is_open = market_start <= now <= market_end
+    logger.debug(f"Market open check: {is_open} (Current time: {now})")
+    return is_open
 
 # ================== MAIN LOOP ==================
 def main():
+    """Main loop to periodically fetch and update option chain data."""
+    logger.info("Starting NIFTY option chain updater...")
     while True:
         try:
             if is_market_open():
+                logger.info("Market is open, fetching option chain data...")
                 df = fetch_option_chain()
                 update_google_sheet(df)
             else:
-                print("⏸ Market closed, skipping update...")
-            print(f"Sleeping for {POLLING_INTERVAL_SECONDS} seconds...\n")
+                logger.info("Market is closed, skipping update...")
+            logger.info(f"Sleeping for {POLLING_INTERVAL_SECONDS} seconds...")
             time.sleep(POLLING_INTERVAL_SECONDS)
         except Exception as e:
-            print(f"❌ Error: {str(e)}")
-            print(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...\n")
+            logger.error(f"Error in main loop: {e}")
+            logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             time.sleep(POLLING_INTERVAL_SECONDS)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Script terminated by user.")
+    except Exception as e:
+        logger.critical(f"Fatal error: {e}")
+        raise
