@@ -95,7 +95,7 @@ def update_google_sheet(df):
 def is_market_open():
     now = datetime.now().time()
     market_start = datetime.strptime("09:15", "%H:%M").time()
-    market_end = datetime.strptime("15:30", "%H:%M").time()
+    market_end = datetime.strptime("22:30", "%H:%M").time()
     return market_start <= now <= market_end
 
 # ================== MAIN LOOP ==================
