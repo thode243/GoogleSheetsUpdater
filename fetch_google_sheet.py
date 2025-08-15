@@ -161,7 +161,7 @@ def is_market_open():
     ist = pytz.timezone("Asia/Kolkata")
     now = datetime.now(ist).time()
     market_start = dtime(9, 15)  # 9:15 AM IST
-    market_end = dtime(15, 30)  # 3:30 PM IST
+    market_end = dtime(18, 30)  # 3:30 PM IST
     is_open = market_start <= now <= market_end
     logger.debug(f"Market open check: {is_open} (Current time: {now}, IST)")
     return is_open
