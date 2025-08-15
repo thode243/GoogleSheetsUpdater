@@ -28,7 +28,7 @@ HEADERS = {
 def is_market_open():
     now = datetime.now().time()
     market_open = dt_time(9, 10)
-    market_close = dt_time(15, 35)
+    market_close = dt_time(18, 35)
     return market_open <= now <= market_close
 
 def fetch_option_chain():
