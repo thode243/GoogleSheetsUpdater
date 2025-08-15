@@ -42,12 +42,10 @@ def fetch_option_chain():
 
     # Step 1: Get cookies
     session.get("https://www.nseindia.com/", headers=HEADERS, timeout=10)
-    session.get("https://www.nseindia.com/option-chain", headers=HEADERS, timeout=10)
 
-    # Step 2: Get latest expiry and call API
-    expiry = get_latest_expiry(session)
-    api_url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry={expiry}"
-    resp = session.get(api_url, headers=HEADERS, timeout=10)
+    # Step 2: Get data (this returns expiry dates + option chain in one call)
+    resp = session.get("https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY",
+                       headers=HEADERS, timeout=10)
     resp.raise_for_status()
     data = resp.json()
 
@@ -56,7 +54,7 @@ def fetch_option_chain():
 
     for entry in option_data:
         strike = entry.get("strikePrice")
-        expiry_date = entry.get("expiryDate")
+        expiry = entry.get("expiryDate")
         ce = entry.get("CE", {})
         pe = entry.get("PE", {})
 
@@ -72,7 +70,7 @@ def fetch_option_chain():
             "CE Ask Price": ce.get("askPrice"),
             "CE Ask Qty": ce.get("askQty"),
             "Strike Price": strike,
-            "Expiry Date": expiry_date,
+            "Expiry Date": expiry,
             "PE Bid Qty": pe.get("bidQty"),
             "PE Bid Price": pe.get("bidprice"),
             "PE Ask Price": pe.get("askPrice"),
@@ -86,6 +84,7 @@ def fetch_option_chain():
         })
 
     return pd.DataFrame(rows)
+
 
 def update_google_sheet(df):
     if not os.path.exists(CREDENTIALS_PATH):
