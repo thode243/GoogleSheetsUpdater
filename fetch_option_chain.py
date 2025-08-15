@@ -11,7 +11,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # URL of the NIFTY option chain
-URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-14"
+URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-21"
 
 # Google Sheets setup
 SHEET_ID = os.getenv("SHEET_ID")  # Store your sheet ID as env variable in GitHub Actions
