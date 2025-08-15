@@ -24,7 +24,12 @@ HEADERS = {
 
 # ================== FUNCTIONS ==================
 def get_latest_expiry(session):
-    """Fetch the nearest expiry date for NIFTY from NSE."""
+    """Fetch the nearest expiry date for NIFTY from NSE with cookies setup."""
+    # Warm up session with cookies
+    session.get("https://www.nseindia.com", headers=HEADERS, timeout=10)
+    session.get("https://www.nseindia.com/option-chain", headers=HEADERS, timeout=10)
+
+    # Now call the API
     r = session.get(
         "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY",
         headers=HEADERS,
@@ -34,8 +39,9 @@ def get_latest_expiry(session):
     data = r.json()
     expiry_dates = data.get("records", {}).get("expiryDates", [])
     if not expiry_dates:
-        raise Exception("No expiry dates found from NSE.")
-    return expiry_dates[0]  # nearest expiry
+        raise Exception(f"No expiry dates found in NSE response: {data}")
+    return expiry_dates[0]
+
 
 def fetch_option_chain():
     """Fetch option chain data for the latest expiry."""
