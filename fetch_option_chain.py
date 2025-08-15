@@ -11,7 +11,19 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # URL of the NIFTY option chain
-URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-08-21"
+BASE_URL = "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY"
+
+def get_latest_expiry_url():
+    resp = requests.get(BASE_URL, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(resp.text, "html.parser")
+    options = soup.select("select#fno_expiry option")
+    if not options:
+        raise Exception("No expiry dates found")
+    nearest_expiry = options[0]["value"]
+    return f"{BASE_URL}/{nearest_expiry}"
+
+# Then in your fetch_option_chain()
+URL = get_latest_expiry_url()
 
 # Google Sheets setup
 SHEET_ID = os.getenv("SHEET_ID")  # Store your sheet ID as env variable in GitHub Actions
