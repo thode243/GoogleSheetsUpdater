@@ -25,6 +25,10 @@ def is_market_open():
     market_close = dt_time(23, 35)
     return market_open <= now <= market_close
 
+from io import StringIO  # ← Add this at the very top with your imports
+
+# ...
+
 def fetch_option_chain():
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
@@ -45,7 +49,10 @@ def fetch_option_chain():
         raise Exception("Option chain table not found")
     
     table = tables[1]
-    df = pd.read_html(str(table))[0]
+    
+    # ✅ Updated part to avoid FutureWarning
+    html_str = StringIO(str(table))
+    df = pd.read_html(html_str)[0]
     
     return df
 
