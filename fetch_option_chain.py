@@ -18,7 +18,7 @@ def fetch_option_chain():
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
-    # Step 1: NSE homepage
+    # Step 1: NSE homepage and option chain page
     session.get("https://www.nseindia.com/", headers=HEADERS, timeout=10)
     session.get("https://www.nseindia.com/option-chain", headers=HEADERS, timeout=10)
 
@@ -28,10 +28,8 @@ def fetch_option_chain():
     data = resp.json()
 
     option_data = data.get("records", {}).get("data", [])
-    if not option_data:
-        raise Exception("No option chain data found for this expiry")
-
     rows = []
+
     for entry in option_data:
         strike = entry.get("strikePrice")
         expiry = entry.get("expiryDate")
@@ -63,10 +61,9 @@ def fetch_option_chain():
             "PE OI": pe.get("openInterest")
         })
 
-    df = pd.DataFrame(rows)
-    return df
-
+    return pd.DataFrame(rows)
 
 if __name__ == "__main__":
     df = fetch_option_chain()
-    print(df.head(10))
+    print(df)
+    print(f"Total rows fetched: {len(df)}")
