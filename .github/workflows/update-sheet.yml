@@ -34,7 +34,7 @@ jobs:
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           POLLING_INTERVAL: 30
-        run: python GoogleSheetsUpdater/NSE_Option_Chain.py
+        run: python NSE_Option_Chain.py
 
       - name: Upload logs
         if: always()
