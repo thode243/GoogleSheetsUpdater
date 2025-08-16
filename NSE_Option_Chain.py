@@ -183,9 +183,9 @@ def is_market_open():
     current_time = now.time()
     current_date = now.date()
     market_start = dtime(9, 15)  # 9:15 AM IST
-    market_end = dtime(23, 50)  # 3:30 PM IST
+    market_end = dtime(23, 00)  # 3:30 PM IST
     
-    is_weekday = current_date.weekday() < 5
+    is_weekday = current_date.weekday() < 6
     is_open = is_weekday and market_start <= current_time <= market_end
     logger.debug(f"Market open check: {is_open} (Current time: {current_time}, Date: {current_date}, IST)")
     return is_open
