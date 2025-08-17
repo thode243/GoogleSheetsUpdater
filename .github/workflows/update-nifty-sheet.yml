@@ -37,7 +37,7 @@ jobs:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GOOGLE_CREDENTIALS_PATH: $GITHUB_WORKSPACE/service_account.json
           POLLING_INTERVAL: 30  # Match the script's default interval
-        run: python GoogleSheetsUpdater/NSE_Option_Chain.py
+        run: python NSE_Option_Chain.py
 
       - name: Upload logs
         if: always()
