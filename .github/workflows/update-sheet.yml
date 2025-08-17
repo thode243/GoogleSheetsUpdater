@@ -3,7 +3,7 @@ name: Update NIFTY Sheet
 on:
   schedule:
     # Run every 5 minutes 
-    - cron: "*/5 6-18 * * 6-7"  # 3:40 AM to 6:20 PM UTC, all days
+    - cron: "*/5 6-18 * * 1-6"  # 3:40 AM to 6:20 PM UTC, all days
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
