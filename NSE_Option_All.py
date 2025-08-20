@@ -27,7 +27,7 @@ SHEET_CONFIG = [
 POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))
 CREDENTIALS_PATH = os.getenv(
     "GOOGLE_CREDENTIALS_PATH",
-    r"C:\Users\user\Desktop\GoogleSheetsUpdater\fetching-data-468910-02079de166c4.json"
+    r"C:\Users\user\Desktop\GoogleSheetsUpdater\online-fetching-0fc02315cf1b.json"
 )
 
 BASE_URL = "https://www.nseindia.com"
@@ -284,3 +284,4 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
