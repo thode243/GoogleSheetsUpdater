@@ -5,8 +5,8 @@ on:
     branches:
       - main
   schedule:
-    # Run every 1 minutes 
-    - cron: "*/5 9-18 * * 1-6"  # 3:40 AM to 6:20 PM UTC, all days
+    # Run every 5 minutes from 9:15 AM to 6:20 PM IST (3:40 AM to 6:20 PM UTC with IST offset)
+    - cron: "*/5 4-12 * * 1-6"  # Adjusted for IST 9:15 AM to 6:20 PM (UTC 3:45 AM to 12:50 PM +1 day)
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
@@ -28,16 +28,16 @@ jobs:
           pip install requests pandas gspread oauth2client urllib3 pytz
 
       - name: Set up Google credentials
-  run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > service_account.json
-  shell: bash
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > $GITHUB_WORKSPACE/service_account.json
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-        - name: Run update script
+      - name: Run update script
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           POLLING_INTERVAL: 30
-          GOOGLE_CREDENTIALS_PATH: /home/runner/work/your-repo/service_account.json  # Adjust path as needed
+          GOOGLE_CREDENTIALS_PATH: $GITHUB_WORKSPACE/service_account.json
         run: python NSE_Option_Chain.py
-
 
       - name: Upload logs
         if: always()
