@@ -50,7 +50,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.StreamHandler(stream=sys.stdout),
-        logging.FileHandler("option_chain_updater.log", encoding="utf-8"),
+        logging.FileHandler("option_chain_updater1.log", encoding="utf-8"),
     ],
 )
 class UnicodeSafeStreamHandler(logging.StreamHandler):
@@ -284,6 +284,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
