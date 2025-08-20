@@ -34,11 +34,11 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
       - name: Run update script
-        env:
-          SHEET_ID: ${{ secrets.SHEET_ID }}
-          POLLING_INTERVAL: 30
-          GOOGLE_CREDENTIALS_PATH: /home/runner/work/${{ github.repository }}/service_account.json
-        run: python NSE_Option_Chainonline.py  # Adjusted path
+  env:
+    SHEET_ID: ${{ secrets.SHEET_ID }}
+    POLLING_INTERVAL: 30
+    GOOGLE_CREDENTIALS_PATH: $GITHUB_WORKSPACE/service_account.json
+  run: python NSE_Option_Chainonline.py
 
       - name: Upload logs
         if: always()
