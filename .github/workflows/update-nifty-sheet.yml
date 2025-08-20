@@ -5,8 +5,8 @@ on:
     branches:
       - main
   schedule:
-    # Run every 5 minutes from 9:15 AM to 6:20 PM IST (3:40 AM to 6:20 PM UTC with IST offset)
-    - cron: "*/1 9-16 * * 1-6"  # Adjusted for IST 9:15 AM to 6:20 PM (UTC 3:45 AM to 12:50 PM +1 day)
+    # Run every 5 minutes from 9:15 AM to 6:20 PM IST (3:45 AM to 12:50 PM UTC)
+    - cron: "*/1 9-16 * * 1-6"
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
@@ -37,11 +37,11 @@ jobs:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           POLLING_INTERVAL: 30
           GOOGLE_CREDENTIALS_PATH: $GITHUB_WORKSPACE/service_account.json
-        run: python NSE_Option_Chain.py
+        run: python GoogleSheetsUpdater/NSE_Option_Chain.py  # Adjusted path
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: script-logs
-          path: option_chain_updater.log
+          path: option_chain_updater.log  # Relative to $GITHUB_WORKSPACE
