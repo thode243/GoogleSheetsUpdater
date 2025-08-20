@@ -44,4 +44,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: script-logs
-          path: option_chain_updater.log  # Relative to $GITHUB_WORKSPACE
+          path: option_chain_updater1.log  # Relative to $GITHUB_WORKSPACE
