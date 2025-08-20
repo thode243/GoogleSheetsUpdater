@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    # Run every 5 minutes 
+    # Run every 1 minutes 
     - cron: "*/5 9-18 * * 1-6"  # 3:40 AM to 6:20 PM UTC, all days
   workflow_dispatch:  # Allows manual triggering
 
