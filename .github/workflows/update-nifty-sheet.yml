@@ -31,12 +31,13 @@ jobs:
   run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > service_account.json
   shell: bash
 
-     - name: Run update script
-  env:
-    SHEET_ID: ${{ secrets.SHEET_ID }}
-    GOOGLE_APPLICATION_CREDENTIALS: $GITHUB_WORKSPACE/service_account.json
-    POLLING_INTERVAL: 30
-  run: python NSE_Option_Chain.py
+        - name: Run update script
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          POLLING_INTERVAL: 30
+          GOOGLE_CREDENTIALS_PATH: /home/runner/work/your-repo/service_account.json  # Adjust path as needed
+        run: python NSE_Option_Chain.py
+
 
       - name: Upload logs
         if: always()
