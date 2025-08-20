@@ -6,7 +6,7 @@ on:
       - main
   schedule:
     # Run every 5 minutes from 9:15 AM to 6:20 PM IST (3:40 AM to 6:20 PM UTC with IST offset)
-    - cron: "*/5 4-12 * * 1-6"  # Adjusted for IST 9:15 AM to 6:20 PM (UTC 3:45 AM to 12:50 PM +1 day)
+    - cron: "*/1 9-16 * * 1-6"  # Adjusted for IST 9:15 AM to 6:20 PM (UTC 3:45 AM to 12:50 PM +1 day)
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
