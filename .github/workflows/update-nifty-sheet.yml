@@ -37,7 +37,7 @@ jobs:
           SHEET_ID: ${{ secrets.SHEET_ID2 }}
           GOOGLE_APPLICATION_CREDENTIALS: $GITHUB_WORKSPACE/service_account.json
           POLLING_INTERVAL: 30
-        run: python option_chain_updater.py
+        run: python NSE_Option_All.py
 
       - name: Upload logs
         if: always()
