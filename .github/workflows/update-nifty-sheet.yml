@@ -36,7 +36,7 @@ jobs:
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           POLLING_INTERVAL: 30
-          GOOGLE_CREDENTIALS_PATH: $GITHUB_WORKSPACE/service_account.json
+          GOOGLE_CREDENTIALS_PATH: /home/runner/work/${{ github.repository }}/service_account.json
         run: python NSE_Option_Chain.py  # Adjusted path
 
       - name: Upload logs
