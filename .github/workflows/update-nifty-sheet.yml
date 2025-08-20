@@ -1,12 +1,13 @@
-name: Update NIFTY Sheet
+name: Update Option Chain Sheets
 
 on:
   push:
     branches:
       - main
   schedule:
-    # Run every 5 minutes 
-    - cron: "*/5 6-18 * * 1-6"  # 3:40 AM to 6:20 PM UTC, all days
+    # Run every 5 minutes during NSE market hours (9:15 AM to 3:30 PM IST, Mon-Fri)
+    # IST is UTC+5:30, so 3:45 AM to 10:00 AM UTC
+    - cron: "*/5 8-16 * * 1-5"
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
@@ -28,15 +29,15 @@ jobs:
           pip install requests pandas gspread oauth2client urllib3 pytz
 
       - name: Set up Google credentials
-  run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > service_account.json
-  shell: bash
+        run: echo "${{ secrets.CREDENTIALS_JSON }}" > service_account.json
+        shell: bash
 
-     - name: Run update script
-  env:
-    SHEET_ID: ${{ secrets.SHEET_ID }}
-    GOOGLE_APPLICATION_CREDENTIALS: $GITHUB_WORKSPACE/service_account.json
-    POLLING_INTERVAL: 30
-  run: python NSE_Option_Chain.py
+      - name: Run update script
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID2 }}
+          GOOGLE_APPLICATION_CREDENTIALS: $GITHUB_WORKSPACE/service_account.json
+          POLLING_INTERVAL: 30
+        run: python option_chain_updater.py
 
       - name: Upload logs
         if: always()
