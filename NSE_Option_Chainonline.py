@@ -260,7 +260,7 @@ def is_market_open():
     current_time = now.time()
     current_date = now.date()
     market_start = dtime(9, 10)  # 9:15 AM IST
-    market_end = dtime(18, 35)   # 3:30 PM IST
+    market_end = dtime(15, 35)   # 3:30 PM IST
     
     is_weekday = current_date.weekday() < 5  # Monday to Friday only
     is_open = is_weekday and market_start <= current_time <= market_end
@@ -284,6 +284,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
