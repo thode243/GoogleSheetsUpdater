@@ -1,14 +1,32 @@
 import streamlit as st
 import pandas as pd
+import io
+import requests
 
 # -----------------------------
 # 1. Load Google Sheet CSV with multi-row header
 # -----------------------------
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5Lvrxvflj_qRKt-eVIUlr3yltRJQgISwea-qRRDoI5tXMT3TFXiwy0pukbs6wjOfS1K_C9zNxtUra/pub?gid=1970058116&single=true&output=csv"
 
-# Robust header parsing: read raw then locate header rows dynamically
+# Robust header parsing: download CSV reliably, then locate header rows dynamically
 # Ignore the first two rows as requested
-raw = pd.read_csv(sheet_url, header=None, skiprows=2)
+
+@st.cache_data(ttl=300)
+def download_csv_text(url: str) -> str:
+    user_agent = (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    )
+    response = requests.get(url, headers={"User-Agent": user_agent}, allow_redirects=True, timeout=30)
+    response.raise_for_status()
+    return response.text
+
+try:
+    csv_text = download_csv_text(sheet_url)
+    raw = pd.read_csv(io.StringIO(csv_text), header=None, skiprows=2)
+except Exception:
+    st.error("Failed to fetch the Google Sheet CSV. Please check the link/share settings and try again.")
+    st.stop()
 
 def _norm_cell(x):
     return str(x).strip()
