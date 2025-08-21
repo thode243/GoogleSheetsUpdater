@@ -92,7 +92,7 @@ jobs:
           import datetime, pytz, sys
           ist = pytz.timezone("Asia/Kolkata")
           now = datetime.datetime.now(ist).time()
-          market_open = datetime.time(9, 15)
+          market_open = datetime.time(9, 10)
           market_close = datetime.time(15, 30)
           if not (market_open <= now <= market_close):
               print("Market is closed, exiting workflow.")
