@@ -7,7 +7,8 @@ import pandas as pd
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5Lvrxvflj_qRKt-eVIUlr3yltRJQgISwea-qRRDoI5tXMT3TFXiwy0pukbs6wjOfS1K_C9zNxtUra/pub?gid=1970058116&single=true&output=csv"
 
 # Robust header parsing: read raw then locate header rows dynamically
-raw = pd.read_csv(sheet_url, header=None)
+# Ignore the first two rows as requested
+raw = pd.read_csv(sheet_url, header=None, skiprows=2)
 
 def _norm_cell(x):
     return str(x).strip()
