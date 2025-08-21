@@ -2,60 +2,69 @@ import streamlit as st
 import pandas as pd
 
 # -----------------------------
-# 1. Load Google Sheet CSV
+# 1. Load Google Sheet CSV with multi-row header
 # -----------------------------
 sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5Lvrxvflj_qRKt-eVIUlr3yltRJQgISwea-qRRDoI5tXMT3TFXiwy0pukbs6wjOfS1K_C9zNxtUra/pub?gid=1970058116&single=true&output=csv"
-df = pd.read_csv(sheet_url)
+
+# Use first 2 rows as header
+df = pd.read_csv(sheet_url, header=[0,1])
+
+# Strip spaces from multi-index columns
+df.columns = pd.MultiIndex.from_tuples([(str(i[0]).strip(), str(i[1]).strip()) for i in df.columns])
 
 # -----------------------------
 # 2. Sidebar Filters
 # -----------------------------
-# Index selection (can be extended dynamically if available in sheet)
-index_list = ['Nifty', 'Bank Nifty', 'Mid CAP Nifty', 'Fin CAP Nifty']
-selected_index = st.sidebar.selectbox("Select Index", index_list)
+# Detect available indices dynamically
+indices = sorted(set([i[0] for i in df.columns if i[0].strip() != '']))
+selected_index = st.sidebar.selectbox("Select Index", indices)
 
-# Dynamically detect expiry dates from column headers
-expiry_dates = sorted({col.replace('Call OI ', '') for col in df.columns if 'Call OI' in col})
-selected_expiry = st.sidebar.selectbox("Select Expiry", expiry_dates)
+# Detect available expiry dates for the selected index
+expiry_cols = [i for i in df.columns if i[0] == selected_index and i[1] != 'Strike Price']
+expiries = sorted(list(set([i[0].split()[-1] for i in expiry_cols])))  # assuming expiry at the end of index name
+selected_expiry = st.sidebar.selectbox("Select Expiry", expiries)
 
-# Strike price filter
-strike_prices = sorted(df['Strike Price'].unique())
+# Detect Strike Price column for selected index
+strike_col = (selected_index, 'Strike Price')
+strike_prices = df[strike_col].unique()
 selected_strikes = st.sidebar.multiselect("Select Strike Prices", strike_prices, default=strike_prices)
 
 # -----------------------------
 # 3. Filter Data
 # -----------------------------
-filtered_df = df[df['Strike Price'].isin(selected_strikes)]
+filtered_df = df[df[strike_col].isin(selected_strikes)]
 
-# Column names based on selected expiry
-call_col = f"Call OI {selected_expiry}"
-put_col = f"Put OI {selected_expiry}"
-diff_col = f"Diff OI {selected_expiry}"
+# Dynamically select columns based on expiry
+def get_col(col_type):
+    # Find column where expiry matches selected_expiry and type matches col_type
+    for c in df.columns:
+        if c[0].startswith(selected_index) and selected_expiry in c[0] and c[1] == col_type:
+            return c
+    return None
 
-# Optional Amount columns
-call_amt_col = f"Call Amount {selected_expiry}"
-put_amt_col = f"Put Amount {selected_expiry}"
-has_amount = all(col in df.columns for col in [call_amt_col, put_amt_col])
+call_col = get_col('COI')        # Change to 'Call OI' if your CSV uses different naming
+put_col = get_col('Diff OI')     # Adjust as needed
+diff_col = get_col('Diff Amount')
+call_amt_col = get_col('Margin')  # Optional
+put_amt_col = get_col('Margin')   # Optional, adjust if separate
 
 # -----------------------------
 # 4. Display Table
 # -----------------------------
+table_cols = [strike_col, call_col, put_col, diff_col]
 st.title(f"{selected_index} Option Chain - {selected_expiry}")
-table_cols = ['Strike Price', call_col, put_col, diff_col]
-if has_amount:
-    table_cols += [call_amt_col, put_amt_col]
-
 st.dataframe(filtered_df[table_cols])
 
 # -----------------------------
 # 5. Charts
 # -----------------------------
-st.subheader("Call OI vs Put OI")
-st.line_chart(filtered_df.set_index('Strike Price')[[call_col, put_col]])
+st.subheader("Call vs Put")
+st.line_chart(filtered_df.set_index(strike_col)[[call_col, put_col]])
 
-st.subheader("Diff OI vs Strike Price")
-st.bar_chart(filtered_df.set_index('Strike Price')[[diff_col]])
+st.subheader("Diff OI")
+st.bar_chart(filtered_df.set_index(strike_col)[[diff_col]])
 
-if has_amount:
-    st.subheader("Call & Put Amount")
-    st.bar_chart(filtered_df.set_index('Strike Price')[[call_amt_col, put_amt_col]])
+# Optional Amount/Margin chart
+if call_amt_col and put_amt_col:
+    st.subheader("Amount / Margin")
+    st.bar_chart(filtered_df.set_index(strike_col)[[call_amt_col, put_amt_col]])
