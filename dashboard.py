@@ -48,11 +48,39 @@ def forward_fill_row(values):
 top1_ff = forward_fill_row(top1)
 top2_ff = forward_fill_row(top2)
 
-# Build level-0 by choosing first non-empty among top1_ff then top2_ff
+def is_dateish(text: str) -> bool:
+    t = _norm_cell(text)
+    return any(ch.isdigit() for ch in t) and ("-" in t or "/" in t)
+
+def is_overall(text: str) -> bool:
+    return _norm_lower(text) == "overall"
+
+def derive_index_and_expiry(a: str, b: str) -> tuple[str, str]:
+    """Heuristic: from two header rows, pick an index-like label and an expiry-like label."""
+    a = _norm_cell(a)
+    b = _norm_cell(b)
+    index_name = ""
+    expiry_name = ""
+    # Prefer dateish/overall as expiry
+    if is_dateish(a) or is_overall(a):
+        expiry_name = a
+    elif a:
+        index_name = a
+    if is_dateish(b) or is_overall(b):
+        if not expiry_name:
+            expiry_name = b
+    elif b and not index_name:
+        index_name = b
+    if not index_name and ("nifty" in _norm_lower(a) or "nifty" in _norm_lower(b)):
+        index_name = a if "nifty" in _norm_lower(a) else b
+    return (index_name or "Unknown"), expiry_name
+
+# Build level-0 as "<Index> <Expiry>" (expiry optional)
 level0 = []
 for a, b in zip(top1_ff, top2_ff):
-    val = _norm_cell(a) or _norm_cell(b) or "Unknown"
-    level0.append(val)
+    idx_name, exp_name = derive_index_and_expiry(a, b)
+    combined = f"{idx_name} {exp_name}".strip()
+    level0.append(combined)
 
 # Level-1 from the 'Strike Price/COI/...' row
 level1 = [ _norm_cell(x) for x in lvl1 ]
@@ -76,6 +104,16 @@ def normalize_label(label: str) -> str:
 
 strike_aliases = {"strike price", "strike", "strikeprice"}
 
+def split_index_expiry(label: str) -> tuple[str, str]:
+    """Split a combined label into (index, expiry) using the last token if it looks like a date or 'Overall'."""
+    text = str(label)
+    if " " not in text:
+        return text, ""
+    left, right = text.rsplit(" ", 1)
+    if is_dateish(right) or is_overall(right):
+        return left, right
+    return text, ""
+
 # -----------------------------
 # 2. Sidebar Filters (defensive)
 # -----------------------------
@@ -88,17 +126,16 @@ strike_cols = [
 # Derive indices preferably from strike columns; otherwise from all level-0 labels
 if strike_cols:
     indices = sorted({
-        str(c[0]).split()[0] for c in strike_cols
+        split_index_expiry(c[0])[0]
+        for c in strike_cols
         if isinstance(c[0], str) and str(c[0]).strip()
     })
 else:
     # Fallback: infer candidates from any level-0 label by taking the first token
     indices = sorted({
-        str(c[0]).split()[0] for c in df.columns
-        if isinstance(c[0], str)
-        and str(c[0]).strip()
-        and not normalize_label(str(c[0])).startswith("unnamed")
-        and str(c[0]).split()[0].isalpha()
+        split_index_expiry(c[0])[0]
+        for c in df.columns
+        if isinstance(c[0], str) and str(c[0]).strip() and not normalize_label(str(c[0])).startswith("unnamed")
     })
 
 if not indices:
@@ -108,16 +145,15 @@ if not indices:
 selected_index = st.sidebar.selectbox("Select Index", indices, index=0)
 
 # Detect available expiries for selected index (exclude the 'Strike Price' columns)
-expiry_level0_labels = [
-    c[0] for c in df.columns
+expiries = sorted({
+    split_index_expiry(c[0])[1]
+    for c in df.columns
     if isinstance(c[0], str)
-    and c[0].startswith(selected_index + " ")
     and isinstance(c[1], str)
     and normalize_label(c[1]) not in strike_aliases
-]
-
-# Extract the part after the first space: "Nifty 21-Aug-2025" -> "21-Aug-2025"
-expiries = sorted({label.split(" ", 1)[1] for label in expiry_level0_labels if " " in label})
+    and split_index_expiry(c[0])[0] == selected_index
+    and split_index_expiry(c[0])[1]
+})
 
 if not expiries:
     st.error(f"No expiries found for index '{selected_index}'.")
