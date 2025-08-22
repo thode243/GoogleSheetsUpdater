@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: "*/1 3-9 * * 1-5"   # Every minute (09:00–15:29 IST, Mon–Fri)
     - cron: "0 10 * * 1-5"      # 15:30 IST exact
-    
+
   workflow_dispatch:
     inputs:
       run_code2:
@@ -19,6 +19,9 @@ jobs:
   code1:
     if: ${{ github.event.inputs.run_code2 != 'true' }}  # Run by default
     runs-on: ubuntu-latest
+    concurrency:
+      group: nifty-update
+      cancel-in-progress: true   # cancel previous runs
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
