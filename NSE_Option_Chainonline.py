@@ -23,7 +23,7 @@ SHEET_CONFIG = [
     {"sheet_name": "Sheet4", "index": "NIFTY", "expiry_index": 3},  # Fourth expiry
    {"sheet_name": "Sheet5", "index": "BANKNIFTY", "expiry_index": None},
    {"sheet_name": "Sheet6", "index": "MIDCPNIFTY", "expiry_index": None},
-   {"sheet_name": "Sheet7", "index": "FINNIFTY", "expiry_index": None},
+  # {"sheet_name": "Sheet7", "index": "FINNIFTY", "expiry_index": None},
    {"sheet_name": "Sheet8", "index": "NIFTY", "expiry_index": 3},  # Fifth expiry
 ]
 POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))
@@ -286,6 +286,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
