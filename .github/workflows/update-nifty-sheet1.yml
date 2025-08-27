@@ -17,11 +17,11 @@ on:
 
 jobs:
   code1:
-    if: ${{ github.event.inputs.run_code2 != 'true' }}
+    if: ${{ github.event.inputs.run_code2 != 'true' }}  # Run by default
     runs-on: ubuntu-latest
     concurrency:
       group: nifty-update
-      cancel-in-progress: true
+      cancel-in-progress: true   # cancel previous runs
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      - name: Run Option Chain Updater (Code1)
+      - name: Run update script (Code1)
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           POLLING_INTERVAL: 30
@@ -58,7 +58,7 @@ jobs:
           path: option_chain_updater1.log
 
   code2:
-    if: ${{ github.event.inputs.run_code2 == 'true' }}
+    if: ${{ github.event.inputs.run_code2 == 'true' }}  # Only run when manually selected
     runs-on: ubuntu-latest
     concurrency:
       group: nifty-update
@@ -84,8 +84,13 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      - name: Check if market is open
+      - name: Run update script (Code2 with market check)
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          POLLING_INTERVAL: 30
+          GOOGLE_CREDENTIALS_PATH: ${{ github.workspace }}/service_account.json
         run: |
+          echo "Checking if market is open..."
           python - <<'EOF'
           import datetime, pytz, sys
           ist = pytz.timezone("Asia/Kolkata")
@@ -96,20 +101,7 @@ jobs:
               print("Market is closed, exiting workflow.")
               sys.exit(0)
           EOF
-
-      
-      - name: Run Sheets Loader (Sheet2)
-        env:
-          SHEET_ID: ${{ secrets.SHEET_ID2 }}
-          GOOGLE_CREDENTIALS_PATH: ${{ github.workspace }}/service_account.json
-        run: python sheets_loader.py
-
-      - name: Run Option Chain Updater
-        env:
-          SHEET_ID: ${{ secrets.SHEET_ID }}
-          POLLING_INTERVAL: 30
-          GOOGLE_CREDENTIALS_PATH: ${{ github.workspace }}/service_account.json
-        run: python NSE_Option_Chainonline.py
+          python NSE_Option_Chainonline.py
 
       - name: Upload logs
         if: always()
