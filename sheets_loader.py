@@ -5,7 +5,7 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 
-# ===== Load credentials from GitHub Codespaces secret =====
+#=== Load credentials from GitHub Codespaces secret =====
 creds_json = os.environ["GOOGLE_CREDENTIALS"]   # secret in Codespaces
 creds_dict = json.loads(creds_json)
 
