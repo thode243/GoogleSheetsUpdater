@@ -11,7 +11,7 @@ def compute_metrics(df):
     return df
 
 # ===== Load from Google Sheet (latest data pushed by updater) =====
-sheet_url = "https://docs.google.com/spreadsheets/d/e/XXXXXX/pub?output=csv"
+sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5Lvrxvflj_qRKt-eVIUlr3yltRJQgISwea-qRRDoI5tXMT3TFXiwy0pukbs6wjOfS1K_C9zNxtUra/pub?gid=42275942&single=true&output=csv"
 df = pd.read_csv(sheet_url)
 df = compute_metrics(df)
 
