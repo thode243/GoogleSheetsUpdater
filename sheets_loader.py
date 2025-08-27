@@ -1,32 +1,36 @@
-
 import os
 import json
 import gspread
-import pandas as pd
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
-#=== Load credentials from GitHub Codespaces secret =====
-creds_json = os.environ["GOOGLE_CREDENTIALS"]   # secret in Codespaces
-creds_dict = json.loads(creds_json)
+# --- Load Google credentials ---
+creds_json = os.environ.get("GOOGLE_CREDENTIALS")
 
-# ===== Authorize with Google Sheets API =====
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-client = gspread.authorize(creds)
+if creds_json:
+    # Case 1: Running in GitHub Actions (secret as env var)
+    creds_info = json.loads(creds_json)
+else:
+    # Case 2: Running in Codespaces / locally (file in workspace)
+    with open("service_account.json") as f:
+        creds_info = json.load(f)
 
-# ===== Open spreadsheet by URL (recommended, less error-prone) =====
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1JJ5nIJpCfX1lNHCiL3kmRXqEYeIFT2sQuXYbzNaia8U/edit"  # <-- paste your sheet link here
-spreadsheet = client.open_by_url(SPREADSHEET_URL)
+# --- Authenticate with Google Sheets ---
+creds = Credentials.from_service_account_info(
+    creds_info,
+    scopes=["https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"]
+)
 
-# ===== Load all sheets into DataFrames =====
-dfs = {}
-for ws in spreadsheet.worksheets():
-    data = ws.get_all_records()
-    df = pd.DataFrame(data)
-    dfs[ws.title] = df   # key = sheet name
+gc = gspread.authorize(creds)
 
-print("✅ Sheets loaded:", list(dfs.keys()))
+# --- Get sheet ID from env (default fallback) ---
+sheet_id = os.environ.get("SHEET_ID", "1JJ5nIJpCfX1lNHCiL3kmRXqEYeIFT2sQuXYbzNaia8U")
 
-# Example usage:
-# print(dfs["Call OI"].head())
-# print(dfs["Put OI"].head())
+# Open spreadsheet
+sh = gc.open_by_key(sheet_id)
+
+# Example: read first worksheet
+worksheet = sh.get_worksheet(0)
+data = worksheet.get_all_values()
+
+print(f"Loaded {len(data)} rows from sheet '{worksheet.title}'")
