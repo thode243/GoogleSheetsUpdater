@@ -35,14 +35,16 @@ CREDENTIALS_PATH = os.getenv(
 BASE_URL = "https://www.nseindia.com"
 OPTION_CHAIN_URL = f"{BASE_URL}/api/option-chain-indices?symbol={{index}}"
 
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0 Safari/537.36",
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Referer": f"{BASE_URL}/option-chain",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://www.nseindia.com/"
+    "Connection": "keep-alive",
 }
-session = requests.Session()
-session.headers.update(headers)
 
 # Logging setup
 logging.basicConfig(
@@ -284,6 +286,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
