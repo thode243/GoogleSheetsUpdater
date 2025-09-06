@@ -264,50 +264,10 @@ def is_market_open():
     market_start = dtime(9, 10)  # 9:15 AM IST
     market_end = dtime(15, 35)   # 3:30 PM IST
     
-    is_weekday = current_date.weekday() < 6  # Monday to Friday only
+    is_weekday = current_date.weekday() < 5  # Monday to Friday only
     is_open = is_weekday and market_start <= current_time <= market_end
     logger.debug(f"Market open check: {is_open} (Current time: {current_time}, Date: {current_date}, IST)")
     return is_open
-
-def fetch_nifty50_index(session):
-    """Fetch Nifty 50 index live data from NSE and return LTP, change, %change."""
-    try:
-        url = f"{BASE_URL}/api/quote-equity?symbol=NIFTY%2050"
-        response = session.get(url, headers=HEADERS, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-
-        price_info = data.get("priceInfo", {})
-        ltp = price_info.get("lastPrice", 0)
-        change = price_info.get("change", 0)
-        percent_change = price_info.get("pChange", 0)
-
-        return ltp, change, percent_change
-    except Exception as e:
-        logger.error(f"Error fetching Nifty 50 index: {e}")
-        return None, None, None
-
-
-def update_nifty50_to_sheet9(client, session):
-    """Write Nifty 50 index data into Sheet9 (A2:C2)."""
-    try:
-        ltp, change, percent_change = fetch_nifty50_index(session)
-        if ltp is None:
-            return
-
-        spreadsheet = client.open_by_key(SHEET_ID)
-        try:
-            sheet = spreadsheet.worksheet("Sheet9")
-        except gspread.exceptions.WorksheetNotFound:
-            sheet = spreadsheet.add_worksheet(title="Sheet9", rows="100", cols="10")
-
-        values = [
-            [datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S"), ltp, f"{change} ({percent_change}%)"]
-        ]
-        sheet.update("A2:C2", values)
-        logger.info(f"Updated Sheet9 with Nifty 50: {values}")
-    except Exception as e:
-        logger.error(f"Error updating Sheet9: {e}")
 
 
 # ===== MAIN LOOP =====
@@ -327,6 +287,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
