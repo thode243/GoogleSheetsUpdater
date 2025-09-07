@@ -21,11 +21,10 @@ SHEET_CONFIG = [
     {"sheet_name": "Sheet2", "index": "NIFTY", "expiry_index": 1},  # Second expiry
     {"sheet_name": "Sheet3", "index": "NIFTY", "expiry_index": 2},  # Third expiry
     {"sheet_name": "Sheet4", "index": "NIFTY", "expiry_index": 3},  # Fourth expiry
-    {"sheet_name": "Sheet5", "index": "BANKNIFTY", "expiry_index": None},
-    {"sheet_name": "Sheet6", "index": "MIDCPNIFTY", "expiry_index": None},
-    # {"sheet_name": "Sheet7", "index": "FINNIFTY", "expiry_index": None},
-    {"sheet_name": "Sheet8", "index": "NIFTY", "expiry_index": 3},  # Fifth expiry
-    {"sheet_name": "Sheet9", "index": "NIFTY", "expiry_index": 0},  # First expiry (from NiftyTrader)
+   {"sheet_name": "Sheet5", "index": "BANKNIFTY", "expiry_index": None},
+   {"sheet_name": "Sheet6", "index": "MIDCPNIFTY", "expiry_index": None},
+  # {"sheet_name": "Sheet7", "index": "FINNIFTY", "expiry_index": None},
+   {"sheet_name": "Sheet8", "index": "NIFTY", "expiry_index": 3},  # Fifth expiry
     
 ]
 POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))
@@ -128,108 +127,47 @@ def get_latest_expiries(session, index, num_expiries=4):
         logger.error(f"Failed to fetch expiry dates for {index}: {e}")
         raise
 
-from datetime import datetime
-
-def format_expiry_for_nt(nse_expiry):
-    """
-    Convert NSE expiry string (e.g., '09-Sep-2025') to 'YYYY-MM-DD' format
-    for NiftyTrader API.
-    """
-    return datetime.strptime(nse_expiry, "%d-%b-%Y").strftime("%Y-%m-%d")
-
-
 def fetch_option_chain():
     """Fetch and process option chain data for multiple indices and expiries."""
     try:
         session = create_session()
         sleep(1)
-
-        indices = list(set(config["index"] for config in SHEET_CONFIG if config["index"]))
+        
+        # Get unique indices from SHEET_CONFIG
+        indices = list(set(config["index"] for config in SHEET_CONFIG))
         expiry_map = {}
-
-        # NSE expiries (for all except Sheet9)
+        
+        # Fetch expiry dates for each index
         for index in indices:
             if index == "NIFTY":
                 expiry_map[index] = get_latest_expiries(session, index, num_expiries=4)
             else:
-                expiry_map[index] = get_latest_expiries(session, index, num_expiries=1)
+                expiry_map[index] = get_latest_expiries(session, index, num_expiries=1)  # Get at least one expiry for others
+        logger.info(f"Expiry dates: {expiry_map}")
 
+        # Dictionary to store DataFrames for each sheet
         sheet_dfs = {config["sheet_name"]: None for config in SHEET_CONFIG}
 
-        for config in SHEET_CONFIG:
-            sheet_name = config["sheet_name"]
-            index = config["index"]
-            expiry_index = config["expiry_index"]
-
-            # ✅ Special case for Sheet9 → NiftyTrader API
-            if sheet_name == "Sheet9":
-                nse_expiry = expiry_map["NIFTY"][0]          # e.g., "09-Sep-2025"
-                expiry = format_expiry_for_nt(nse_expiry)    # → "2025-09-09"
-                nt_url = (
-                    "https://webapi.niftytrader.in/webapi/option/option-chain-data"
-                    f"?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
-                )
-
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                                  "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                    "Referer": "https://www.niftytrader.in/",
-                    "Origin": "https://www.niftytrader.in",
-                }
-
-                response = requests.get(nt_url, headers=headers, timeout=30)
-                logger.info(f"Requesting: {nt_url}")
-                logger.info(f"Status: {response.status_code}")
-                logger.debug(f"Response (truncated): {response.text[:200]}")
-
-                if response.status_code != 200:
-                    logger.error("Failed to fetch data for Sheet9")
-                    continue
-
-                data = response.json()
-                option_data = data.get("data", {}).get("records", [])
-                if not option_data:
-                    logger.warning("No option data found in response for Sheet9")
-                    continue
-
-                # ✅ Process entries including VWAP
-                rows = []
-                for entry in option_data:
-                    strike = entry.get("strikePrice")
-                    ce = entry.get("CE", {})
-                    pe = entry.get("PE", {})
-                    rows.append({
-                        "CE OI": ce.get("openInterest", 0),
-                        "CE Chng OI": ce.get("changeinOpenInterest", 0),
-                        "CE LTP": ce.get("lastPrice", 0),
-                        "CE VWAP": ce.get("vwap", 0),
-                        "Strike Price": strike,
-                        "Expiry Date": expiry,
-                        "PE LTP": pe.get("lastPrice", 0),
-                        "PE VWAP": pe.get("vwap", 0),
-                        "PE Chng OI": pe.get("changeinOpenInterest", 0),
-                        "PE OI": pe.get("openInterest", 0),
-                    })
-
-                if rows:
-                    sheet_dfs[sheet_name] = pd.DataFrame(rows)
-                continue  # skip normal NSE logic for Sheet9
-
-            # ✅ Normal NSE logic (Sheet1–8)
+        # Fetch option chain data for each index
+        for index in indices:
             url = OPTION_CHAIN_URL.format(index=index)
             response = session.get(url, headers=HEADERS, timeout=30)
             response.raise_for_status()
             data = response.json()
-            option_data = data.get("records", {}).get("data", [])
-            expiry_dfs = {}
 
+            option_data = data.get("records", {}).get("data", [])
+            if not option_data:
+                raise ValueError(f"No option chain data found for {index}.")
+
+            # Organize data by expiry for this index
+            expiry_dfs = {}
             for entry in option_data:
                 expiry = entry.get("expiryDate")
                 if expiry in expiry_map[index]:
                     strike = entry.get("strikePrice")
                     ce = entry.get("CE", {})
                     pe = entry.get("PE", {})
+
                     row = {
                         "CE OI": ce.get("openInterest", 0),
                         "CE Chng OI": ce.get("changeinOpenInterest", 0),
@@ -240,18 +178,37 @@ def fetch_option_chain():
                         "PE Chng OI": pe.get("changeinOpenInterest", 0),
                         "PE OI": pe.get("openInterest", 0),
                     }
-                    expiry_dfs.setdefault(expiry, []).append(row)
+                    if expiry not in expiry_dfs:
+                        expiry_dfs[expiry] = []
+                    expiry_dfs[expiry].append(row)
 
-            if expiry_index is not None and index == "NIFTY":
-                expiry = expiry_map[index][expiry_index]
-                if expiry in expiry_dfs:
-                    sheet_dfs[sheet_name] = pd.DataFrame(expiry_dfs[expiry])
-            elif expiry_index is None:
-                expiry = expiry_map[index][0]
-                if expiry in expiry_dfs:
-                    sheet_dfs[sheet_name] = pd.DataFrame(expiry_dfs[expiry])
+            # Convert to DataFrames and assign to sheets
+            for config in SHEET_CONFIG:
+                if config["index"] == index:
+                    sheet_name = config["sheet_name"]
+                    expiry_index = config["expiry_index"]
+                    if expiry_index is not None and index == "NIFTY":
+                        # For NIFTY sheets, select specific expiry
+                        expiry = expiry_map[index][expiry_index]
+                        if expiry in expiry_dfs:
+                            df = pd.DataFrame(expiry_dfs[expiry])
+                            sheet_dfs[sheet_name] = df
+                    elif expiry_index is None:
+                        # For non-NIFTY sheets, use the first available expiry
+                        expiry = expiry_map[index][0]
+                        if expiry in expiry_dfs:
+                            df = pd.DataFrame(expiry_dfs[expiry])
+                            sheet_dfs[sheet_name] = df
 
+        # Validate DataFrames
+        for sheet_name, df in sheet_dfs.items():
+            if df is None or df.empty:
+                logger.warning(f"No data found for sheet {sheet_name}")
+            else:
+                logger.info(f"Fetched {len(df)} rows for sheet {sheet_name} (index: {next(config['index'] for config in SHEET_CONFIG if config['sheet_name'] == sheet_name)})")
         return sheet_dfs
+
+
 
     except requests.HTTPError as e:
         if e.response.status_code == 401:
@@ -335,11 +292,6 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
-
-
-
-
-
 
 
 
