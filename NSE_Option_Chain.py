@@ -97,7 +97,8 @@ def is_market_open():
     now = datetime.now(ist)
     market_start = dtime(9, 10)
     market_end = dtime(15, 35)
-    return now.weekday() < 5 and market_start <= now.time() <= market_end
+    return now.weekday() in [0, 1, 2, 3, 4, 6] and market_start <= now.time() <= market_end
+    # return now.weekday() < 7 and market_start <= now.time() <= market_end
 
 # ===== MAIN LOOP =====
 if __name__ == "__main__":
