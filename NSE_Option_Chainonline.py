@@ -152,13 +152,15 @@ def fetch_option_chain():
             expiry_index = config["expiry_index"]
 
            # ✅ Special case for Sheet9 → NiftyTrader API
-            if sheet_name == "Sheet9":
-                expiry = expiry_map["NIFTY"][0]  # first expiry
-                nt_url = (
-                    "https://webapi.niftytrader.in/webapi/option/option-chain-data"
-                    f"?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
-                )
-
+            
+if sheet_name == "Sheet9":
+    nse_expiry = expiry_map["NIFTY"][0]          # e.g., "09-Sep-2025"
+    expiry = format_expiry_for_nt(nse_expiry)    # → "2025-09-09"
+    nt_url = (
+        "https://webapi.niftytrader.in/webapi/option/option-chain-data"
+        f"?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
+    )
+                
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                                   "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
@@ -330,6 +332,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
