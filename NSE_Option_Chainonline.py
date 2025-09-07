@@ -128,6 +128,16 @@ def get_latest_expiries(session, index, num_expiries=4):
         logger.error(f"Failed to fetch expiry dates for {index}: {e}")
         raise
 
+from datetime import datetime
+
+def format_expiry_for_nt(nse_expiry):
+    """
+    Convert NSE expiry string (e.g., '09-Sep-2025') to 'YYYY-MM-DD' format
+    for NiftyTrader API.
+    """
+    return datetime.strptime(nse_expiry, "%d-%b-%Y").strftime("%Y-%m-%d")
+
+
 def fetch_option_chain():
     """Fetch and process option chain data for multiple indices and expiries."""
     try:
@@ -325,6 +335,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
