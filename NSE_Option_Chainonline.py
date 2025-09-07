@@ -151,15 +151,39 @@ def fetch_option_chain():
             index = config["index"]
             expiry_index = config["expiry_index"]
 
-            # ✅ Special case for Sheet9 → Fetch from NiftyTrader
+           # ✅ Special case for Sheet9 → NiftyTrader API
             if sheet_name == "Sheet9":
                 expiry = expiry_map["NIFTY"][0]  # first expiry
-                nt_url = f"https://webapi.niftytrader.in/webapi/option/option-chain-data?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
-                response = requests.get(nt_url, headers=HEADERS, timeout=30)
-                response.raise_for_status()
-                data = response.json()
+                nt_url = (
+                    "https://webapi.niftytrader.in/webapi/option/option-chain-data"
+                    f"?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
+                )
 
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                  "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
+                    "Referer": "https://www.niftytrader.in/",
+                    "Origin": "https://www.niftytrader.in",
+                }
+
+                response = requests.get(nt_url, headers=headers, timeout=30)
+
+                logger.info(f"Requesting: {nt_url}")
+                logger.info(f"Status: {response.status_code}")
+                logger.debug(f"Response (truncated): {response.text[:200]}")
+
+                if response.status_code != 200:
+                    logger.error("Failed to fetch data for Sheet9")
+                    continue
+
+                data = response.json()
                 option_data = data.get("data", {}).get("records", [])
+                if not option_data:
+                    logger.warning("No option data found in response for Sheet9")
+                    continue
+
+                # ✅ Process entries including VWAP
                 rows = []
                 for entry in option_data:
                     strike = entry.get("strikePrice")
@@ -169,18 +193,18 @@ def fetch_option_chain():
                         "CE OI": ce.get("openInterest", 0),
                         "CE Chng OI": ce.get("changeinOpenInterest", 0),
                         "CE LTP": ce.get("lastPrice", 0),
-                        "CE VWAP": ce.get("vwap", 0),   # ✅ Added
+                        "CE VWAP": ce.get("vwap", 0),   # added
                         "Strike Price": strike,
                         "Expiry Date": expiry,
                         "PE LTP": pe.get("lastPrice", 0),
-                        "PE VWAP": pe.get("vwap", 0),   # ✅ Added
+                        "PE VWAP": pe.get("vwap", 0),   # added
                         "PE Chng OI": pe.get("changeinOpenInterest", 0),
                         "PE OI": pe.get("openInterest", 0),
                     })
+
                 if rows:
                     sheet_dfs[sheet_name] = pd.DataFrame(rows)
-                continue  # skip NSE logic
-
+                continue  # skip NSE logic for Sheet9
 
 
             # ✅ Normal NSE logic (Sheet1–8)
@@ -306,6 +330,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
