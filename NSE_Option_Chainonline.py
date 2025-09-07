@@ -151,16 +151,15 @@ def fetch_option_chain():
             index = config["index"]
             expiry_index = config["expiry_index"]
 
-           # ✅ Special case for Sheet9 → NiftyTrader API
-            
-if sheet_name == "Sheet9":
-    nse_expiry = expiry_map["NIFTY"][0]          # e.g., "09-Sep-2025"
-    expiry = format_expiry_for_nt(nse_expiry)    # → "2025-09-09"
-    nt_url = (
-        "https://webapi.niftytrader.in/webapi/option/option-chain-data"
-        f"?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
-    )
-                
+            # ✅ Special case for Sheet9 → NiftyTrader API
+            if sheet_name == "Sheet9":
+                nse_expiry = expiry_map["NIFTY"][0]          # e.g., "09-Sep-2025"
+                expiry = format_expiry_for_nt(nse_expiry)    # → "2025-09-09"
+                nt_url = (
+                    "https://webapi.niftytrader.in/webapi/option/option-chain-data"
+                    f"?symbol={index}&exchange=nse&expiryDate={expiry}&atmBelow=0&atmAbove=0"
+                )
+
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                                   "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
@@ -170,7 +169,6 @@ if sheet_name == "Sheet9":
                 }
 
                 response = requests.get(nt_url, headers=headers, timeout=30)
-
                 logger.info(f"Requesting: {nt_url}")
                 logger.info(f"Status: {response.status_code}")
                 logger.debug(f"Response (truncated): {response.text[:200]}")
@@ -195,19 +193,18 @@ if sheet_name == "Sheet9":
                         "CE OI": ce.get("openInterest", 0),
                         "CE Chng OI": ce.get("changeinOpenInterest", 0),
                         "CE LTP": ce.get("lastPrice", 0),
-                        "CE VWAP": ce.get("vwap", 0),   # added
+                        "CE VWAP": ce.get("vwap", 0),
                         "Strike Price": strike,
                         "Expiry Date": expiry,
                         "PE LTP": pe.get("lastPrice", 0),
-                        "PE VWAP": pe.get("vwap", 0),   # added
+                        "PE VWAP": pe.get("vwap", 0),
                         "PE Chng OI": pe.get("changeinOpenInterest", 0),
                         "PE OI": pe.get("openInterest", 0),
                     })
 
                 if rows:
                     sheet_dfs[sheet_name] = pd.DataFrame(rows)
-                continue  # skip NSE logic for Sheet9
-
+                continue  # skip normal NSE logic for Sheet9
 
             # ✅ Normal NSE logic (Sheet1–8)
             url = OPTION_CHAIN_URL.format(index=index)
@@ -233,9 +230,7 @@ if sheet_name == "Sheet9":
                         "PE Chng OI": pe.get("changeinOpenInterest", 0),
                         "PE OI": pe.get("openInterest", 0),
                     }
-                    if expiry not in expiry_dfs:
-                        expiry_dfs[expiry] = []
-                    expiry_dfs[expiry].append(row)
+                    expiry_dfs.setdefault(expiry, []).append(row)
 
             if expiry_index is not None and index == "NIFTY":
                 expiry = expiry_map[index][expiry_index]
@@ -247,8 +242,6 @@ if sheet_name == "Sheet9":
                     sheet_dfs[sheet_name] = pd.DataFrame(expiry_dfs[expiry])
 
         return sheet_dfs
-
-
 
     except requests.HTTPError as e:
         if e.response.status_code == 401:
@@ -332,6 +325,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
