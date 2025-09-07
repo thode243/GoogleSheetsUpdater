@@ -266,10 +266,10 @@ def is_market_open():
     current_date = now.date()
     market_start = dtime(9, 10)
     market_end = dtime(18, 35)
-    return now.weekday() in [0, 1, 2, 3, 4, 6] and market_start <= now.time() <= market_end
-    # return now.weekday() < 5 and market_start <= now.time() <= market_end
+   # return now.weekday() in [0, 1, 2, 3, 4, 6] and market_start <= now.time() <= market_end
+     return now.weekday() < 5 and market_start <= now.time() <= market_end
     
-    # is_weekday = current_date.weekday() < 5  # Monday to Friday only
+    is_weekday = current_date.weekday() < 5  # Monday to Friday only
     is_open = is_weekday and market_start <= current_time <= market_end
     logger.debug(f"Market open check: {is_open} (Current time: {current_time}, Date: {current_date}, IST)")
     return is_open
@@ -292,6 +292,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
