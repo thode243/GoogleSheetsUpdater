@@ -13,6 +13,7 @@ import logging
 import sys
 import uuid
 
+#
 # ===== CONFIG =====
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
@@ -290,6 +291,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
