@@ -83,16 +83,19 @@ def create_session():
         status_forcelist=[429, 500, 502, 503, 504],
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    
+    session.headers.update(HEADERS)
+
     try:
-        response = session.get(f"{BASE_URL}/option-chain", headers=HEADERS, timeout=30)
+        # 👇 Step 1: Hit NSE homepage, not /option-chain
+        response = session.get(BASE_URL, timeout=30)
         response.raise_for_status()
         cookies = session.cookies.get_dict()
         logger.debug(f"Cookies fetched: {cookies}")
     except requests.RequestException as e:
-        logger.error(f"Failed to fetch cookies from {BASE_URL}/option-chain: {e}")
+        logger.error(f"Failed to fetch cookies from {BASE_URL}: {e}")
         raise
     return session
+
 
 def get_latest_expiries(session, index, num_expiries=4):
     """Fetch the next 'num_expiries' future expiry dates for a given index from the NSE API."""
@@ -291,6 +294,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
