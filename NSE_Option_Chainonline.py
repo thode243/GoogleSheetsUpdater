@@ -86,7 +86,7 @@ def create_session():
 
     try:
         # 👇 Step 1: Hit NSE homepage, not /option-chain
-        response = session.get(BASE_URL, timeout=30)
+        response = session.get(BASE_URL, timeout=60)
         response.raise_for_status()
         cookies = session.cookies.get_dict()
         logger.debug(f"Cookies fetched: {cookies}")
@@ -100,7 +100,7 @@ def get_latest_expiries(session, index, num_expiries=4):
     """Fetch the next 'num_expiries' future expiry dates for a given index from the NSE API."""
     try:
         url = OPTION_CHAIN_URL.format(index=index)
-        response = session.get(url, headers=HEADERS, timeout=30)
+        response = session.get(url, headers=HEADERS, timeout=60)
         response.raise_for_status()
         data = response.json()
         expiries = data.get("records", {}).get("expiryDates", [])
@@ -154,7 +154,7 @@ def fetch_option_chain():
         # Fetch option chain data for each index
         for index in indices:
             url = OPTION_CHAIN_URL.format(index=index)
-            response = session.get(url, headers=HEADERS, timeout=30)
+            response = session.get(url, headers=HEADERS, timeout=60)
             response.raise_for_status()
             data = response.json()
 
@@ -293,6 +293,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
