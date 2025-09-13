@@ -97,6 +97,7 @@ def fetch_option_chain(session, index, expiry):
     return df, call_diff_sum, put_diff_sum
 
 def update_google_sheet(sheet_dfs, spot_value=0):
+    """Update Google Sheets with the fetched DataFrames."""
     scope = ["https://spreadsheets.google.com/feeds",
              "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
@@ -109,20 +110,27 @@ def update_google_sheet(sheet_dfs, spot_value=0):
             logger.warning(f"No data for {sheet_name}, skipping...")
             continue
         try:
+            # ✅ Check if sheet exists first
             try:
                 worksheet = spreadsheet.worksheet(sheet_name)
                 worksheet.clear()
             except gspread.WorksheetNotFound:
                 worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="200", cols="30")
 
+            # Update data
             worksheet.update([df.columns.tolist()] + df.values.tolist())
+
+            # Optional: update spot value and LTP–VWAP sums
             if spot_value:
                 worksheet.update("P2", spot_value)
             worksheet.update("F3", call_diff_sum)
             worksheet.update("K3", put_diff_sum)
+
             logger.info(f"Updated {sheet_name} with {len(df)} rows")
+
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
+
 
 # ===== MAIN =====
 if __name__ == "__main__":
@@ -140,4 +148,5 @@ if __name__ == "__main__":
 
 
     
+
 
