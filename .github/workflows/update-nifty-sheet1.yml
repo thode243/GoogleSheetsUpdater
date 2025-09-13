@@ -45,7 +45,7 @@ jobs:
       - name: Run update script (Code1)
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
-          POLLING_INTERVAL: 30
+          POLLING_INTERVAL: 60
           GOOGLE_CREDENTIALS_PATH: ${{ github.workspace }}/service_account.json
         run: python NSE_Option_Chainonline.py
 
