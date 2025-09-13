@@ -12,7 +12,7 @@ import logging
 import sys
 
 # ===== CONFIG =====
-SHEET_ID = "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow""  # replace with your Google Sheet ID
+SHEET_ID = "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow"
 CREDENTIALS_PATH = r"C:\Users\user\Desktop\GoogleSheetsUpdater\online-fetching-f68510b7dbdb.json"
 
 SHEET_CONFIG = [
@@ -159,3 +159,4 @@ if __name__ == "__main__":
     dfs = build_sheet_dfs(session)
     update_google_sheet(dfs)
     logger.info("All sheets updated successfully!")
+
