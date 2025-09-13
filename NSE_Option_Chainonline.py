@@ -96,7 +96,7 @@ def fetch_option_chain(session, index, expiry):
     logger.info(f"✅ Fetched {len(df)} rows for {index} expiry {expiry}")
     return df, call_diff_sum, put_diff_sum
 
-def update_google_sheet(sheet_dfs, spot_value=0):
+def update_google_sheet(sheet_dfs):
     """Update Google Sheets with the fetched DataFrames."""
     scope = ["https://spreadsheets.google.com/feeds",
              "https://www.googleapis.com/auth/drive"]
@@ -104,32 +104,26 @@ def update_google_sheet(sheet_dfs, spot_value=0):
     client = gspread.authorize(creds)
     spreadsheet = client.open_by_key(SHEET_ID)
 
-    for sheet_name, df_tuple in sheet_dfs.items():
-        df, call_diff_sum, put_diff_sum = df_tuple
+    for sheet_name, df in sheet_dfs.items():
         if df.empty:
             logger.warning(f"No data for {sheet_name}, skipping...")
             continue
         try:
-            # ✅ Check if sheet exists first
+            # Check if sheet exists, else create
             try:
                 worksheet = spreadsheet.worksheet(sheet_name)
                 worksheet.clear()
             except gspread.WorksheetNotFound:
                 worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="200", cols="30")
 
-            # Update data
+            # Update sheet with DataFrame
             worksheet.update([df.columns.tolist()] + df.values.tolist())
-
-            # Optional: update spot value and LTP–VWAP sums
-            if spot_value:
-                worksheet.update("P2", spot_value)
-            worksheet.update("F3", call_diff_sum)
-            worksheet.update("K3", put_diff_sum)
 
             logger.info(f"Updated {sheet_name} with {len(df)} rows")
 
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
+
 
 
 # ===== MAIN =====
@@ -148,6 +142,7 @@ if __name__ == "__main__":
 
 
     
+
 
 
 
