@@ -8,7 +8,8 @@ import sys
 import os
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-#
+
+
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")  # GitHub Actions secret path
@@ -60,41 +61,26 @@ def fetch_option_chain(session, index, expiry):
     resp = session.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
     data = resp.json().get("resultData", {}).get("opDatas", [])
-    
+
     df_rows = []
-    call_diff_sum = 0
-    put_diff_sum = 0
     for item in data:
-        strike = item.get("strike_price", 0)
-        call_oi = item.get("calls_oi", 0)
-        call_ltp = item.get("calls_ltp", 0)
-        call_vwap = item.get("calls_average_price", 0)
-        call_chg_oi = item.get("calls_chng_oi", 0)
-        put_oi = item.get("puts_oi", 0)
-        put_ltp = item.get("puts_ltp", 0)
-        put_vwap = item.get("puts_average_price", 0)
-        put_chg_oi = item.get("puts_chng_oi", 0)
-
-        call_diff_sum += call_ltp - call_vwap
-        put_diff_sum += put_ltp - put_vwap
-
         df_rows.append({
-            "Strike": strike,
-            "Call OI": call_oi,
-            "Call LTP": call_ltp,
-            "Call VWAP": call_vwap,
-            "Call LTP - VWAP": call_ltp - call_vwap,
-            "Put OI": put_oi,
-            "Put LTP": put_ltp,
-            "Put VWAP": put_vwap,
-            "Put LTP - VWAP": put_ltp - put_vwap,
-            "Change Call OI": call_chg_oi,
-            "Change Put OI": put_chg_oi
+            "Strike": item.get("strike_price", 0),
+            "Call OI": item.get("calls_oi", 0),
+            "Call LTP": item.get("calls_ltp", 0),
+            "Call VWAP": item.get("calls_average_price", 0),
+            "Call LTP - VWAP": item.get("calls_ltp", 0) - item.get("calls_average_price", 0),
+            "Put OI": item.get("puts_oi", 0),
+            "Put LTP": item.get("puts_ltp", 0),
+            "Put VWAP": item.get("puts_average_price", 0),
+            "Put LTP - VWAP": item.get("puts_ltp", 0) - item.get("puts_average_price", 0),
+            "Change Call OI": item.get("calls_chng_oi", 0),
+            "Change Put OI": item.get("puts_chng_oi", 0)
         })
 
     df = pd.DataFrame(df_rows)
     logger.info(f"✅ Fetched {len(df)} rows for {index} expiry {expiry}")
-    return df, call_diff_sum, put_diff_sum
+    return df
 
 def update_google_sheet(sheet_dfs):
     """Update Google Sheets with the fetched DataFrames."""
@@ -109,39 +95,33 @@ def update_google_sheet(sheet_dfs):
             logger.warning(f"No data for {sheet_name}, skipping...")
             continue
         try:
-            # Check if sheet exists, else create
             try:
                 worksheet = spreadsheet.worksheet(sheet_name)
                 worksheet.clear()
             except gspread.WorksheetNotFound:
                 worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="200", cols="30")
 
-            # Update sheet with DataFrame
             worksheet.update([df.columns.tolist()] + df.values.tolist())
-
             logger.info(f"Updated {sheet_name} with {len(df)} rows")
-
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
-
-
 
 # ===== MAIN =====
 if __name__ == "__main__":
     logger.info("Starting Option Chain Updater with VWAP...")
     session = create_session()
     sheet_dfs = {}
-    spot_value = 0  # You can fetch spot from another API or Sheet if needed
 
     for cfg in SHEET_CONFIG:
-        df, call_diff_sum, put_diff_sum = fetch_option_chain(session, cfg["index"], cfg["expiry"])
-        sheet_dfs[cfg["sheet_name"]] = (df, call_diff_sum, put_diff_sum)
+        df = fetch_option_chain(session, cfg["index"], cfg["expiry"])
+        sheet_dfs[cfg["sheet_name"]] = df  # store only DataFrame
 
     update_google_sheet(sheet_dfs)
     logger.info("All sheets updated successfully with VWAP!")
 
 
     
+
 
 
 
