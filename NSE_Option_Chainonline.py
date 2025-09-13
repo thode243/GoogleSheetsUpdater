@@ -13,7 +13,7 @@ import os
 
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
-CREDENTIALS_PATH = r"C:\Users\user\Desktop\GoogleSheetsUpdater\online-fetching-f68510b7dbdb.json"
+CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")  # GitHub Actions secret path
 
 SHEET_CONFIG = [
     {"sheet_name": "sheet111", "index": "NIFTY", "expiry_index": 0},
@@ -24,13 +24,8 @@ SHEET_CONFIG = [
 ]
 
 # Hardcoded upcoming expiries
-  
-
-    # Expiries as per API
 nifty_expiries = ["2025-09-16", "2025-09-23", "2025-09-30", "2025-10-07"]
 banknifty_expiry = ["2025-09-30"]
-
-
 
 BASE_URL = "https://www.niftytrader.in"
 OPTION_CHAIN_URL = (
@@ -48,7 +43,7 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-POLLING_INTERVAL_SECONDS = 60
+POLLING_INTERVAL_SECONDS = 60  # fetch every minute
 
 # ===== LOGGING =====
 logging.basicConfig(
@@ -90,9 +85,11 @@ def fetch_option_chain(session, index, expiry):
             "CE OI": ce.get("openInterest", 0),
             "CE Chng OI": ce.get("changeinOpenInterest", 0),
             "CE LTP": ce.get("lastPrice", 0),
+            "CE VWAP": ce.get("vwap", 0),
             "PE LTP": pe.get("lastPrice", 0),
             "PE Chng OI": pe.get("changeinOpenInterest", 0),
             "PE OI": pe.get("openInterest", 0),
+            "PE VWAP": pe.get("vwap", 0),
             "Expiry Date": expiry
         })
     df = pd.DataFrame(df_rows)
@@ -101,14 +98,15 @@ def fetch_option_chain(session, index, expiry):
 
 def build_sheet_dfs(session):
     """Build DataFrames for all sheets."""
+    expiry_map = {
+        "NIFTY": nifty_expiries,
+        "BANKNIFTY": banknifty_expiry
+    }
     sheet_dfs = {}
     for cfg in SHEET_CONFIG:
         index = cfg["index"]
         expiry_idx = cfg["expiry_index"]
         expiry = expiry_map[index][expiry_idx]
-for item in records:
-    if item.get("expiryDate") != expiry:
-        continue
         df = fetch_option_chain(session, index, expiry)
         sheet_dfs[cfg["sheet_name"]] = df
     return sheet_dfs
@@ -137,9 +135,8 @@ def update_google_sheet(sheet_dfs):
 
 # ===== MAIN =====
 if __name__ == "__main__":
-    logger.info("Starting Option Chain Updater...")
+    logger.info("Starting Option Chain Updater with VWAP...")
     session = create_session()
     sheet_dfs = build_sheet_dfs(session)
     update_google_sheet(sheet_dfs)
-    logger.info("All sheets updated successfully!")
-
+    logger.info("All sheets updated successfully with VWAP!")
