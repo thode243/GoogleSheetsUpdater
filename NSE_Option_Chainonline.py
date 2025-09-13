@@ -1,31 +1,25 @@
 import requests
 import pandas as pd
 import gspread
-from time import sleep
 from datetime import datetime
-import pytz
 from oauth2client.service_account import ServiceAccountCredentials
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 import logging
 import sys
 import os
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")  # GitHub Actions secret path
 
 SHEET_CONFIG = [
-    {"sheet_name": "sheet111", "index": "NIFTY", "expiry_index": 0},
-    {"sheet_name": "sheet222", "index": "NIFTY", "expiry_index": 1},
-    {"sheet_name": "sheet333", "index": "NIFTY", "expiry_index": 2},
-    {"sheet_name": "sheet444", "index": "NIFTY", "expiry_index": 3},
-    {"sheet_name": "sheet555", "index": "BANKNIFTY", "expiry_index": 0},
+    {"sheet_name": "sheet111", "index": "NIFTY", "expiry": "2025-09-16"},
+    {"sheet_name": "sheet222", "index": "NIFTY", "expiry": "2025-09-23"},
+    {"sheet_name": "sheet333", "index": "NIFTY", "expiry": "2025-09-30"},
+    {"sheet_name": "sheet444", "index": "NIFTY", "expiry": "2025-10-07"},
+    {"sheet_name": "sheet555", "index": "BANKNIFTY", "expiry": "2025-09-30"},
 ]
-
-# Hardcoded upcoming expiries
-nifty_expiries = ["2025-09-16", "2025-09-23", "2025-09-30", "2025-10-07"]
-banknifty_expiry = ["2025-09-30"]
 
 BASE_URL = "https://www.niftytrader.in"
 OPTION_CHAIN_URL = (
@@ -34,18 +28,13 @@ OPTION_CHAIN_URL = (
 )
 
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
-    ),
-    "Accept": "application/json, text/plain, */*",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+    "Accept": "application/json",
     "Referer": f"{BASE_URL}/option-chain",
     "Connection": "keep-alive",
 }
 
-POLLING_INTERVAL_SECONDS = 60  # fetch every minute
-
-# ===== LOGGING =====
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -55,7 +44,6 @@ logger = logging.getLogger(__name__)
 
 # ===== FUNCTIONS =====
 def create_session():
-    """Create a requests session with retries."""
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
@@ -68,57 +56,55 @@ def create_session():
     return session
 
 def fetch_option_chain(session, index, expiry):
-    """Fetch option chain data for a given index and expiry."""
     url = OPTION_CHAIN_URL.format(index=index, expiry=expiry)
     resp = session.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
-    data = resp.json()
-    records = data.get("records", {}).get("data", [])
+    data = resp.json().get("resultData", {}).get("opDatas", [])
+    
     df_rows = []
-    for item in records:
-        if item.get("expiryDate") != expiry:
-            continue
-        ce = item.get("CE", {})
-        pe = item.get("PE", {})
+    call_diff_sum = 0
+    put_diff_sum = 0
+    for item in data:
+        strike = item.get("strike_price", 0)
+        call_oi = item.get("calls_oi", 0)
+        call_ltp = item.get("calls_ltp", 0)
+        call_vwap = item.get("calls_average_price", 0)
+        call_chg_oi = item.get("calls_chng_oi", 0)
+        put_oi = item.get("puts_oi", 0)
+        put_ltp = item.get("puts_ltp", 0)
+        put_vwap = item.get("puts_average_price", 0)
+        put_chg_oi = item.get("puts_chng_oi", 0)
+
+        call_diff_sum += call_ltp - call_vwap
+        put_diff_sum += put_ltp - put_vwap
+
         df_rows.append({
-            "Strike Price": item.get("strikePrice"),
-            "CE OI": ce.get("openInterest", 0),
-            "CE Chng OI": ce.get("changeinOpenInterest", 0),
-            "CE LTP": ce.get("lastPrice", 0),
-            "CE VWAP": ce.get("vwap", 0),
-            "PE LTP": pe.get("lastPrice", 0),
-            "PE Chng OI": pe.get("changeinOpenInterest", 0),
-            "PE OI": pe.get("openInterest", 0),
-            "PE VWAP": pe.get("vwap", 0),
-            "Expiry Date": expiry
+            "Strike": strike,
+            "Call OI": call_oi,
+            "Call LTP": call_ltp,
+            "Call VWAP": call_vwap,
+            "Call LTP - VWAP": call_ltp - call_vwap,
+            "Put OI": put_oi,
+            "Put LTP": put_ltp,
+            "Put VWAP": put_vwap,
+            "Put LTP - VWAP": put_ltp - put_vwap,
+            "Change Call OI": call_chg_oi,
+            "Change Put OI": put_chg_oi
         })
+
     df = pd.DataFrame(df_rows)
     logger.info(f"✅ Fetched {len(df)} rows for {index} expiry {expiry}")
-    return df
+    return df, call_diff_sum, put_diff_sum
 
-def build_sheet_dfs(session):
-    """Build DataFrames for all sheets."""
-    expiry_map = {
-        "NIFTY": nifty_expiries,
-        "BANKNIFTY": banknifty_expiry
-    }
-    sheet_dfs = {}
-    for cfg in SHEET_CONFIG:
-        index = cfg["index"]
-        expiry_idx = cfg["expiry_index"]
-        expiry = expiry_map[index][expiry_idx]
-        df = fetch_option_chain(session, index, expiry)
-        sheet_dfs[cfg["sheet_name"]] = df
-    return sheet_dfs
-
-def update_google_sheet(sheet_dfs):
-    """Update Google Sheets with the fetched DataFrames."""
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+def update_google_sheet(sheet_dfs, spot_value=0):
+    scope = ["https://spreadsheets.google.com/feeds",
+             "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
     client = gspread.authorize(creds)
     spreadsheet = client.open_by_key(SHEET_ID)
-    
-    for sheet_name, df in sheet_dfs.items():
+
+    for sheet_name, df_tuple in sheet_dfs.items():
+        df, call_diff_sum, put_diff_sum = df_tuple
         if df.empty:
             logger.warning(f"No data for {sheet_name}, skipping...")
             continue
@@ -127,8 +113,13 @@ def update_google_sheet(sheet_dfs):
                 worksheet = spreadsheet.worksheet(sheet_name)
                 worksheet.clear()
             except gspread.WorksheetNotFound:
-                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="200", cols="20")
+                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="200", cols="30")
+
             worksheet.update([df.columns.tolist()] + df.values.tolist())
+            if spot_value:
+                worksheet.update("P2", spot_value)
+            worksheet.update("F3", call_diff_sum)
+            worksheet.update("K3", put_diff_sum)
             logger.info(f"Updated {sheet_name} with {len(df)} rows")
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
@@ -137,6 +128,16 @@ def update_google_sheet(sheet_dfs):
 if __name__ == "__main__":
     logger.info("Starting Option Chain Updater with VWAP...")
     session = create_session()
-    sheet_dfs = build_sheet_dfs(session)
-    update_google_sheet(sheet_dfs)
+    sheet_dfs = {}
+    spot_value = 0  # You can fetch spot from another API or Sheet if needed
+
+    for cfg in SHEET_CONFIG:
+        df, call_diff_sum, put_diff_sum = fetch_option_chain(session, cfg["index"], cfg["expiry"])
+        sheet_dfs[cfg["sheet_name"]] = (df, call_diff_sum, put_diff_sum)
+
+    update_google_sheet(sheet_dfs, spot_value)
     logger.info("All sheets updated successfully with VWAP!")
+
+
+    
+
