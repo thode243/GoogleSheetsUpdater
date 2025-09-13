@@ -24,10 +24,13 @@ SHEET_CONFIG = [
 ]
 
 # Hardcoded upcoming expiries
-EXPIRIES = {
-    "NIFTY": ["16-Sep-2025", "23-Sep-2025", "30-Sep-2025", "07-Oct-2025"],
-    "BANKNIFTY": ["30-Sep-2025"]
-}
+  
+
+    # Expiries as per API
+nifty_expiries = ["2025-09-16", "2025-09-23", "2025-09-30", "2025-10-07"]
+banknifty_expiry = ["2025-09-30"]
+
+
 
 BASE_URL = "https://www.niftytrader.in"
 OPTION_CHAIN_URL = (
@@ -102,7 +105,10 @@ def build_sheet_dfs(session):
     for cfg in SHEET_CONFIG:
         index = cfg["index"]
         expiry_idx = cfg["expiry_index"]
-        expiry = EXPIRIES[index][expiry_idx]
+        expiry = expiry_map[index][expiry_idx]
+for item in records:
+    if item.get("expiryDate") != expiry:
+        continue
         df = fetch_option_chain(session, index, expiry)
         sheet_dfs[cfg["sheet_name"]] = df
     return sheet_dfs
@@ -136,3 +142,4 @@ if __name__ == "__main__":
     sheet_dfs = build_sheet_dfs(session)
     update_google_sheet(sheet_dfs)
     logger.info("All sheets updated successfully!")
+
