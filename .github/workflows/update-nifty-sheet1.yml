@@ -86,7 +86,7 @@ jobs:
       - name: Run update script (Code2 with market check)
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
-          POLLING_INTERVAL: 30
+          POLLING_INTERVAL: 60
           GOOGLE_CREDENTIALS_PATH: ${{ github.workspace }}/service_account.json
         run: |
           echo "⏰ Checking if market is open..."
