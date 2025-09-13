@@ -137,11 +137,12 @@ if __name__ == "__main__":
         df, call_diff_sum, put_diff_sum = fetch_option_chain(session, cfg["index"], cfg["expiry"])
         sheet_dfs[cfg["sheet_name"]] = (df, call_diff_sum, put_diff_sum)
 
-    update_google_sheet(sheet_dfs, spot_value)
+    update_google_sheet(sheet_dfs)
     logger.info("All sheets updated successfully with VWAP!")
 
 
     
+
 
 
 
