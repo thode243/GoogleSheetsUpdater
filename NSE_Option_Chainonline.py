@@ -27,7 +27,7 @@ SHEET_CONFIG = [
    {"sheet_name": "Sheet8", "index": "NIFTY", "expiry_index": 3},  # Fifth expiry
     
 ]
-POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 30))
+POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL", 60))
 CREDENTIALS_PATH = os.getenv(
     "GOOGLE_CREDENTIALS_PATH",
     r"C:\Users\user\Desktop\GoogleSheetsUpdater\online-fetching-f68510b7dbdb"
@@ -293,6 +293,7 @@ if __name__ == "__main__":
             logger.error(f"Error in main loop: {e}")
             logger.info(f"Retrying after {POLLING_INTERVAL_SECONDS} seconds...")
             sleep(POLLING_INTERVAL_SECONDS)
+
 
 
 
