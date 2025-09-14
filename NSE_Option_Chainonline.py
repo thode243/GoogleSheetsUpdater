@@ -13,7 +13,6 @@ import logging
 import sys
 import uuid
 
-#
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")  # GitHub Actions secret path
@@ -97,6 +96,7 @@ if __name__ == "__main__":
 
     update_google_sheet(sheet_dfs)
     logger.info("All sheets updated successfully from Moneycontrol!")
+
 
 
 
