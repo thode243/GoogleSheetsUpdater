@@ -84,8 +84,26 @@ def update_google_sheet(sheet_dfs):
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
 
+def is_market_open():
+    """Check if the market is open based on IST time."""
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
+    current_time = now.time()
+    current_date = now.date()
+    market_start = dtime(9, 10)   # 9:15 AM IST
+    market_end = dtime(15, 35)    # 3:30 PM IST
+    
+    is_weekday = current_date.weekday() < 5  # Monday (0) to Friday (4)
+    is_open = is_weekday and market_start <= current_time <= market_end
+    logger.debug(f"Market open check: {is_open} (Time: {current_time}, Date: {current_date}, IST)")
+    return is_open
+
 # ===== MAIN =====
 if __name__ == "__main__":
+    if not is_market_open():
+        logger.info("📉 Market is closed. Skipping data fetch.")
+        sys.exit(0)
+
     logger.info("Starting Option Chain Updater (Moneycontrol HTML)...")
     session = create_session()
     sheet_dfs = {}
@@ -95,10 +113,7 @@ if __name__ == "__main__":
         sheet_dfs[cfg["sheet_name"]] = df
 
     update_google_sheet(sheet_dfs)
-    logger.info("All sheets updated successfully from Moneycontrol!")
-
-
-
+    logger.info("✅ All sheets updated successfully from Moneycontrol!")
 
 
 
