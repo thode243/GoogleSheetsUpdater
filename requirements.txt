@@ -6,5 +6,4 @@ requests
 lxml
 pytz
 streamlit
-pandas
 plotly
