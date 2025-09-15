@@ -15,6 +15,9 @@ import uuid
 import time
 import re
 import numpy as np
+from datetime import datetime, time as dtime, timedelta
+import pytz
+from time import sleep
 
 #
 # ===== CONFIG =====
@@ -111,9 +114,7 @@ def update_google_sheet(sheet_dfs):
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
 
-from datetime import datetime, time as dtime, timedelta
-import pytz
-from time import sleep
+
 
 def is_market_open():
     """Check if market is open (IST)"""
@@ -164,5 +165,6 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
