@@ -15,9 +15,10 @@ import uuid
 import time
 import re
 import numpy as np
-from datetime import datetime, time as dtime, timedelta
+from datetime import datetime, time, timedelta
 import pytz
 from time import sleep
+from zoneinfo import ZoneInfo 
 
 #
 # ===== CONFIG =====
@@ -126,20 +127,17 @@ def is_market_open():
     market_end = dtime(15, 31)
     return current_date.weekday() < 5 and market_start <= current_time <= market_end
 
+IST = ZoneInfo("Asia/Kolkata")
+
 def seconds_until_next_open():
-    """Calculate seconds until next market open (09:15 IST)"""
-    ist = pytz.timezone("Asia/Kolkata")
-    now = datetime.now(ist)
-    market_start = dtime(9, 10)
-    if now.time() < market_start:
-        next_open = datetime.combine(now.date(), market_start)
-    else:
-        # After market close, go to next weekday
-        next_day = now.date() + timedelta(days=1)
-        while next_day.weekday() >= 5:  # skip Saturday/Sunday
-            next_day += timedelta(days=1)
-        next_open = datetime.combine(next_day, market_start)
-    return (next_open - now).total_seconds()
+    now = datetime.now(IST)  # timezone-aware
+    market_open_time = datetime.combine(now.date(), time(9, 15), tzinfo=IST)
+    
+    if now > market_open_time:
+        # move to next day
+        market_open_time += timedelta(days=1)
+    
+    return (market_open_time - now).total_seconds()
 
 # ===== MAIN LOOP =====
 if __name__ == "__main__":
@@ -165,6 +163,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
