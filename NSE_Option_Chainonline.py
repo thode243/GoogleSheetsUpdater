@@ -16,6 +16,7 @@ import time
 import re
 import numpy as np
 
+#
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")
@@ -141,5 +142,6 @@ if __name__ == "__main__":
             logger.info("📉 Market closed, skipping fetch.")
 
         sleep(60)  # wait 60 seconds before next fetch
+
 
 
