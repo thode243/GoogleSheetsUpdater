@@ -122,15 +122,15 @@ def is_market_open():
     now = datetime.now(ist)
     current_time = now.time()
     current_date = now.date()
-    market_start = dtime(9, 15)
-    market_end = dtime(17, 30)
+    market_start = dtime(9, 10)
+    market_end = dtime(15, 31)
     return current_date.weekday() < 5 and market_start <= current_time <= market_end
 
 def seconds_until_next_open():
     """Calculate seconds until next market open (09:15 IST)"""
     ist = pytz.timezone("Asia/Kolkata")
     now = datetime.now(ist)
-    market_start = dtime(9, 15)
+    market_start = dtime(9, 10)
     if now.time() < market_start:
         next_open = datetime.combine(now.date(), market_start)
     else:
@@ -165,6 +165,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
