@@ -13,12 +13,11 @@ import logging
 import sys
 import uuid
 import time
-
-
+import re
 
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
-CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")  # GitHub Actions secret path
+CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")
 
 SHEET_CONFIG = [
     {"sheet_name": "sheet111", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-09-16"},
@@ -50,20 +49,32 @@ def create_session():
     session.headers.update(HEADERS)
     return session
 
+def clean_number(x):
+    """Convert strings with commas/currency to float, leave numbers as-is."""
+    if isinstance(x, str):
+        x = re.sub(r'[^\d.-]', '', x)
+        try:
+            return float(x)
+        except:
+            return None
+    return x
+
 def fetch_option_chain_html(session, url):
     """Fetch option chain table from Moneycontrol using pandas.read_html"""
     resp = session.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
-    tables = pd.read_html(resp.text)
+    tables = pd.read_html(resp.text)  # Use default parser; ensure lxml or html5lib installed
     if not tables:
         logger.warning(f"No tables found at {url}")
         return pd.DataFrame()
-    df = tables[0]  # Option chain is usually the 1st table
+    df = tables[0]
+    # Clean numbers in the DataFrame
+    df = df.applymap(clean_number)
     logger.info(f"✅ Fetched {len(df)} rows from {url}")
     return df
 
 def update_google_sheet(sheet_dfs):
-    """Update Google Sheets with the fetched DataFrames."""
+    """Update Google Sheets with the cleaned DataFrames."""
     scope = ["https://spreadsheets.google.com/feeds",
              "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
@@ -79,29 +90,25 @@ def update_google_sheet(sheet_dfs):
                 worksheet = spreadsheet.worksheet(sheet_name)
                 worksheet.clear()
             except gspread.WorksheetNotFound:
-                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="200", cols="30")
+                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=str(len(df)+10), cols=str(len(df.columns)+5))
 
-            # Convert headers + rows to list for gspread
-            worksheet.update([df.columns.astype(str).tolist()] + df.astype(str).values.tolist())
+            # Update sheet with headers and numeric values
+            worksheet.update([df.columns.astype(str).tolist()] + df.values.tolist())
             logger.info(f"Updated {sheet_name} with {len(df)} rows")
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
 
 def is_market_open():
-    """Check if the market is open based on IST time."""
+    """Check if market is open (IST)"""
     ist = pytz.timezone("Asia/Kolkata")
     now = datetime.now(ist)
     current_time = now.time()
     current_date = now.date()
-    market_start = dtime(9, 10)   # 9:15 AM IST
-    market_end = dtime(15, 35)    # 3:30 PM IST
-    
-    is_weekday = current_date.weekday() < 5  # Monday (0) to Friday (4)
-    is_open = is_weekday and market_start <= current_time <= market_end
-    logger.debug(f"Market open check: {is_open} (Time: {current_time}, Date: {current_date}, IST)")
-    return is_open
+    market_start = dtime(9, 15)
+    market_end = dtime(15, 30)
+    return current_date.weekday() < 5 and market_start <= current_time <= market_end
 
-# ===== MAIN =====
+# ===== MAIN LOOP =====
 if __name__ == "__main__":
     logger.info("Starting Option Chain Updater (Moneycontrol HTML)...")
     session = create_session()
@@ -115,19 +122,10 @@ if __name__ == "__main__":
                     sheet_dfs[cfg["sheet_name"]] = df
 
                 update_google_sheet(sheet_dfs)
-                logger.info("✅ All sheets updated successfully from Moneycontrol!")
+                logger.info("✅ All sheets updated successfully!")
             except Exception as e:
                 logger.error(f"Error during fetch-update cycle: {e}")
         else:
             logger.info("📉 Market closed, skipping fetch.")
 
-        # wait 60 seconds before next fetch
-        time.sleep(60)
-
-
-
-
-
-
-
-
+        sleep(60)  # wait 60 seconds before next fetch
