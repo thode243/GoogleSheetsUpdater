@@ -14,7 +14,7 @@ import sys
 import uuid
 import time
 
-#
+
 
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
@@ -123,6 +123,7 @@ if __name__ == "__main__":
 
         # wait 60 seconds before next fetch
         time.sleep(60)
+
 
 
 
