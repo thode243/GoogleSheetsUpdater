@@ -111,6 +111,10 @@ def update_google_sheet(sheet_dfs):
         except Exception as e:
             logger.error(f"Failed to update {sheet_name}: {e}")
 
+from datetime import datetime, time as dtime, timedelta
+import pytz
+from time import sleep
+
 def is_market_open():
     """Check if market is open (IST)"""
     ist = pytz.timezone("Asia/Kolkata")
@@ -118,8 +122,23 @@ def is_market_open():
     current_time = now.time()
     current_date = now.date()
     market_start = dtime(9, 15)
-    market_end = dtime(15, 30)
+    market_end = dtime(17, 30)
     return current_date.weekday() < 5 and market_start <= current_time <= market_end
+
+def seconds_until_next_open():
+    """Calculate seconds until next market open (09:15 IST)"""
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
+    market_start = dtime(9, 15)
+    if now.time() < market_start:
+        next_open = datetime.combine(now.date(), market_start)
+    else:
+        # After market close, go to next weekday
+        next_day = now.date() + timedelta(days=1)
+        while next_day.weekday() >= 5:  # skip Saturday/Sunday
+            next_day += timedelta(days=1)
+        next_open = datetime.combine(next_day, market_start)
+    return (next_open - now).total_seconds()
 
 # ===== MAIN LOOP =====
 if __name__ == "__main__":
@@ -138,10 +157,12 @@ if __name__ == "__main__":
                 logger.info("✅ All sheets updated successfully!")
             except Exception as e:
                 logger.error(f"Error during fetch-update cycle: {e}")
+
+            sleep(60)  # wait 60 seconds before next fetch
+
         else:
-            logger.info("📉 Market closed, skipping fetch.")
-
-        sleep(60)  # wait 60 seconds before next fetch
-
+            secs = seconds_until_next_open()
+            logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
+            sleep(secs)
 
 
