@@ -12,7 +12,8 @@ from urllib3.util.retry import Retry
 import logging
 import sys
 import uuid
-#
+import time
+
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")  # GitHub Actions secret path
@@ -100,21 +101,26 @@ def is_market_open():
 
 # ===== MAIN =====
 if __name__ == "__main__":
-    if not is_market_open():
-        logger.info("📉 Market is closed. Skipping data fetch.")
-        sys.exit(0)
-
     logger.info("Starting Option Chain Updater (Moneycontrol HTML)...")
     session = create_session()
-    sheet_dfs = {}
 
-    for cfg in SHEET_CONFIG:
-        df = fetch_option_chain_html(session, cfg["url"])
-        sheet_dfs[cfg["sheet_name"]] = df
+    while True:
+        if is_market_open():
+            try:
+                sheet_dfs = {}
+                for cfg in SHEET_CONFIG:
+                    df = fetch_option_chain_html(session, cfg["url"])
+                    sheet_dfs[cfg["sheet_name"]] = df
 
-    update_google_sheet(sheet_dfs)
-    logger.info("✅ All sheets updated successfully from Moneycontrol!")
+                update_google_sheet(sheet_dfs)
+                logger.info("✅ All sheets updated successfully from Moneycontrol!")
+            except Exception as e:
+                logger.error(f"Error during fetch-update cycle: {e}")
+        else:
+            logger.info("📉 Market closed, skipping fetch.")
 
+        # wait 60 seconds before next fetch
+        time.sleep(60)
 
 
 
