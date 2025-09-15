@@ -14,6 +14,7 @@ import sys
 import uuid
 import time
 import re
+import numpy as np
 
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
@@ -56,20 +57,27 @@ def clean_number(x):
         try:
             return float(x)
         except:
-            return None
+            return 0  # fallback to 0 if conversion fails
+    if x is None:
+        return 0
     return x
 
 def fetch_option_chain_html(session, url):
     """Fetch option chain table from Moneycontrol using pandas.read_html"""
     resp = session.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
-    tables = pd.read_html(resp.text)  # Use default parser; ensure lxml or html5lib installed
+    tables = pd.read_html(resp.text)
     if not tables:
         logger.warning(f"No tables found at {url}")
         return pd.DataFrame()
     df = tables[0]
-    # Clean numbers in the DataFrame
+
+    # Clean numbers
     df = df.applymap(clean_number)
+
+    # Replace NaN/inf/-inf with 0
+    df = df.replace([np.nan, np.inf, -np.inf], 0)
+
     logger.info(f"✅ Fetched {len(df)} rows from {url}")
     return df
 
@@ -90,7 +98,11 @@ def update_google_sheet(sheet_dfs):
                 worksheet = spreadsheet.worksheet(sheet_name)
                 worksheet.clear()
             except gspread.WorksheetNotFound:
-                worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=str(len(df)+10), cols=str(len(df.columns)+5))
+                worksheet = spreadsheet.add_worksheet(
+                    title=sheet_name,
+                    rows=str(len(df)+10),
+                    cols=str(len(df.columns)+5)
+                )
 
             # Update sheet with headers and numeric values
             worksheet.update([df.columns.astype(str).tolist()] + df.values.tolist())
@@ -129,3 +141,5 @@ if __name__ == "__main__":
             logger.info("📉 Market closed, skipping fetch.")
 
         sleep(60)  # wait 60 seconds before next fetch
+
+
