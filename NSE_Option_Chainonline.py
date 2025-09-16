@@ -26,10 +26,10 @@ SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")
 
 SHEET_CONFIG = [
-    {"sheet_name": "sheet111", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-09-16"},
-    {"sheet_name": "sheet222", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-09-23"},
-    {"sheet_name": "sheet333", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-09-30"},
-    {"sheet_name": "sheet444", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-10-07"},
+    {"sheet_name": "sheet111", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-09-23"},
+    {"sheet_name": "sheet222", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-09-30"},
+    {"sheet_name": "sheet333", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-10-07"},
+    {"sheet_name": "sheet444", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/NIFTY/2025-10-14"},
     {"sheet_name": "sheet555", "url": "https://www.moneycontrol.com/indices/fno/view-option-chain/BANKNIFTY/2025-09-30"},
 ]
 
@@ -163,6 +163,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
