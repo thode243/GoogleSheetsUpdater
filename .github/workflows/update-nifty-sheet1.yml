@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "*/1 3-11 * * 1-5"   # Every minute 09:00–15:29 IST, Mon–Fri
+    - cron: "*/1 3-9 * * 1-5"   # Every minute 09:00–15:29 IST, Mon–Fri
     - cron: "0 10 * * 1-5"      # At 15:30 IST exact
   workflow_dispatch:
     inputs:
@@ -98,7 +98,7 @@ jobs:
           ist = pytz.timezone("Asia/Kolkata")
           now = datetime.datetime.now(ist).time()
           market_open = datetime.time(9, 10)
-          market_close = datetime.time(16, 30)
+          market_close = datetime.time(15, 30)
           if not (market_open <= now <= market_close):
               print("📉 Market is closed, exiting workflow.")
               sys.exit(0)
