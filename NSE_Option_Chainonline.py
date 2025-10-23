@@ -1,3 +1,6 @@
+
+# daily run
+
 import requests
 import pandas as pd
 import gspread
@@ -163,6 +166,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
