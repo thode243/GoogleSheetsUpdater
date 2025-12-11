@@ -1,5 +1,5 @@
 
-# daily runn
+# daily run
 
 import requests
 import pandas as pd
@@ -23,7 +23,6 @@ import pytz
 from time import sleep
 from zoneinfo import ZoneInfo 
 
-#
 # ===== CONFIG =====
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")
@@ -166,6 +165,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
