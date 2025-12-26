@@ -131,7 +131,7 @@ def is_market_open():
     now = datetime.now(ist)
     current_time = now.time()
     current_date = now.date()
-    market_start = time(9, 07)
+    market_start = time(9, 10)
     market_end = time(15, 31)
     return current_date.weekday() < 5 and market_start <= current_time <= market_end
 
@@ -173,6 +173,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
