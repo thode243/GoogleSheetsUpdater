@@ -18,7 +18,7 @@ import numpy as np
 from io import StringIO
 from zoneinfo import ZoneInfo
 
-# ==== CONFIG ==========
+# ==== CONFIG =========
 
 
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
@@ -175,6 +175,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
