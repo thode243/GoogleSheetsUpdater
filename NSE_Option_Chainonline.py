@@ -134,7 +134,8 @@ def is_market_open():
     current_date = now.date()
     market_start = time(9, 10)
     market_end = time(15, 31)
-    return current_date.weekday() < 5 and market_start <= current_time <= market_end
+    return (current_date.weekday() < 5 or current_date.weekday() == 6) and market_start <= current_time <= market_end
+    # return current_date.weekday() < 5 and market_start <= current_time <= market_end
 
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -174,6 +175,7 @@ if __name__ == "__main__":
             secs = seconds_until_next_open()
             logger.info(f"📉 Market closed, sleeping for {int(secs/60)} minutes until next open.")
             sleep(secs)
+
 
 
 
