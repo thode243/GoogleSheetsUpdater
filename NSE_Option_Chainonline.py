@@ -18,7 +18,7 @@ import numpy as np
 from io import StringIO
 from zoneinfo import ZoneInfo
 
-# ==== CONFIG ==============
+# ==== CONFIG ===========
 SHEET_ID = os.getenv("SHEET_ID", "15pghBDGQ34qSMI2xXukTYD4dzG2cOYIYmXfCtb-X5ow")
 CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "service_account.json")
 
